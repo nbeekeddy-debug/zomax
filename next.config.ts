@@ -1,5 +1,20 @@
 import type { NextConfig } from "next";
 
+const noIndexSources = [
+  "/account/:path*",
+  "/cart/:path*",
+  "/checkout/:path*",
+  "/confirmation/:path*",
+  "/forgot-password/:path*",
+  "/login/:path*",
+  "/offline/:path*",
+  "/orders/:path*",
+  "/sell/:path*",
+  "/seller/:path*",
+  "/signup/:path*",
+  "/wishlist/:path*",
+];
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
@@ -24,6 +39,10 @@ const nextConfig: NextConfig = {
           { key: "Permissions-Policy", value: "camera=(), microphone=()" },
         ],
       },
+      ...noIndexSources.map((source) => ({
+        source,
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }],
+      })),
       {
         source: "/sw.js",
         headers: [

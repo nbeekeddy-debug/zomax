@@ -5,33 +5,53 @@ import { PwaRuntime } from "@/components/pwa-runtime";
 import { SiteHeader } from "@/components/site-header";
 import { MobileDock } from "@/components/mobile-dock";
 import { AuthSessionBridge } from "@/components/auth-session-bridge";
+import { siteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
     default: "Zomax Marketplace",
     template: "%s | Zomax",
   },
-  description: "Discover trusted sellers and quality products on Zomax.",
+  description: "Discover products, local sellers, deals and marketplace services across Zomax.",
   applicationName: "Zomax",
+  category: "shopping",
+  keywords: ["Zomax", "Nigeria marketplace", "online shopping", "local sellers", "deals", "seller marketplace"],
   manifest: "/manifest.webmanifest",
   icons: {
     icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
+  openGraph: {
+    type: "website",
+    siteName: "Zomax",
+    title: "Zomax Marketplace",
+    description: "Discover products, local sellers and deals across Zomax.",
+    url: "/",
+  },
+  twitter: {
+    card: "summary",
+    title: "Zomax Marketplace",
+    description: "Discover products, local sellers and deals across Zomax.",
   },
   appleWebApp: {
     capable: true,
     title: "Zomax",
     statusBarStyle: "default",
   },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f97316",
+  themeColor: "#c94b0b",
   colorScheme: "light",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en-NG">
       <body>
         <MarketplaceProvider>
           <PwaRuntime />

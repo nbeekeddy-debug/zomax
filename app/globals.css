@@ -4,6 +4,7 @@
   --brand: #f97316;
   --brand-dark: #c2410c;
   --brand-action: #c94b0b;
+  --brand-action-hover: #a83a08;
   --ink: #261d19;
   --text-secondary: #594b42;
   --text-muted: #66574d;
@@ -11,6 +12,21 @@
   --surface: #f8f4f0;
   --paper: #fffdfb;
   --line: #dfd2ca;
+  --warm-dark: #2b211c;
+}
+
+@theme inline {
+  --color-zomax-brand: var(--brand);
+  --color-zomax-brand-dark: var(--brand-dark);
+  --color-zomax-action: var(--brand-action);
+  --color-zomax-ink: var(--ink);
+  --color-zomax-secondary: var(--text-secondary);
+  --color-zomax-muted: var(--text-muted);
+  --color-zomax-soft: var(--text-soft);
+  --color-zomax-surface: var(--surface);
+  --color-zomax-paper: var(--paper);
+  --color-zomax-line: var(--line);
+  --color-zomax-dark: var(--warm-dark);
 }
 
 * { box-sizing: border-box; }
@@ -37,8 +53,8 @@ body {
 
 img, svg, video, canvas { max-width: 100%; }
 
-/* Do not set link color globally. Tailwind 4 utilities live in a cascade layer;
-   an unlayered `a { color: inherit }` can override classes such as text-white. */
+/* Do not set link color globally. Tailwind utilities live in a cascade layer;
+   an unlayered link color rule can override classes such as text-white. */
 a { text-decoration: none; }
 button, input, select, textarea { font: inherit; max-width: 100%; }
 button, a { -webkit-tap-highlight-color: transparent; }
@@ -58,16 +74,65 @@ button, a { -webkit-tap-highlight-color: transparent; }
   outline-offset: 3px;
 }
 
-/* Semantic text helpers. Use these when a component needs stronger copy instead
-   of globally rewriting Tailwind color utilities. */
+/* Semantic helpers are intentionally scoped classes, not global text overrides. */
 .z-text-primary { color: var(--ink); }
 .z-text-secondary { color: var(--text-secondary); }
 .z-text-muted { color: var(--text-muted); }
 .z-text-soft { color: var(--text-soft); }
 .z-text-brand { color: var(--brand-dark); }
 
-/* Bright orange stays available for decoration. Interactive controls carrying
-   white text use a deeper action orange for reliable contrast. */
+@layer components {
+  .z-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 1.75rem;
+  }
+
+  .z-btn-primary {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 1rem;
+    background: var(--brand-action);
+    color: white;
+    font-weight: 800;
+    transition: background-color 160ms ease, transform 160ms ease;
+  }
+
+  .z-btn-primary:hover { background: var(--brand-action-hover); }
+  .z-btn-primary:active { transform: translateY(1px); }
+
+  .z-btn-dark {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 1rem;
+    background: var(--warm-dark);
+    color: white;
+    font-weight: 800;
+  }
+
+  .z-field {
+    width: 100%;
+    min-height: 48px;
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    background: var(--paper);
+    color: var(--ink);
+    padding: 0.75rem 1rem;
+  }
+
+  .z-field:focus {
+    border-color: #fb923c;
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(255, 237, 213, 0.95);
+  }
+}
+
+/* Compatibility layer for existing orange utility buttons. New components
+   should prefer z-btn-primary or semantic Tailwind tokens above. */
 .bg-orange-500.text-white,
 .bg-orange-600.text-white,
 button.bg-orange-500,
@@ -83,7 +148,7 @@ button.bg-orange-500:hover,
 a.bg-orange-500:hover,
 button.bg-orange-600:hover,
 a.bg-orange-600:hover {
-  background-color: #a83a08 !important;
+  background-color: var(--brand-action-hover) !important;
 }
 
 [aria-disabled="true"],
