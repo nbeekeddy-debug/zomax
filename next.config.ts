@@ -15,6 +15,21 @@ const noIndexSources = [
   "/wishlist/:path*",
 ];
 
+const legacyRedirects = [
+  ["/index.html", "/"],
+  ["/home.html", "/"],
+  ["/shop.html", "/shop"],
+  ["/cart.html", "/cart"],
+  ["/wishlist.html", "/wishlist"],
+  ["/orders.html", "/orders"],
+  ["/confirmation.html", "/confirmation"],
+  ["/profile.html", "/account"],
+  ["/login.html", "/login"],
+  ["/signup.html", "/signup"],
+  ["/dashboard.html", "/seller"],
+  ["/sell.html", "/sell"],
+] as const;
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
@@ -27,6 +42,9 @@ const nextConfig: NextConfig = {
         hostname: "images.unsplash.com",
       },
     ],
+  },
+  async redirects() {
+    return legacyRedirects.map(([source, destination]) => ({ source, destination, permanent: true }));
   },
   async headers() {
     return [
