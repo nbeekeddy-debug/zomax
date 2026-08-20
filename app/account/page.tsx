@@ -1,7 +1,9 @@
 "use client";
 
 import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import { useMarketplace } from "@/components/marketplace-provider";
+import { getSupabaseBrowserClient } from "@/lib/auth-client";
 import type { Account } from "@/lib/marketplace-types";
 
 export default function AccountPage() {
@@ -14,7 +16,14 @@ export default function AccountPage() {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     updateAccount(draft);
-    setMessage("Profile saved in this browser.");
+    setMessage("Profile saved.");
+  }
+
+  async function signOut() {
+    const supabase = getSupabaseBrowserClient();
+    if (supabase) await supabase.auth.signOut();
+    logout();
+    setMessage("Signed out on this device.");
   }
 
   function exportAccount() {
@@ -43,30 +52,57 @@ export default function AccountPage() {
     }
   }
 
-  return (
-    <main className="mx-auto max-w-3xl px-4 py-10 md:px-6">
-      <div className="flex items-end justify-between gap-4">
-        <div><h1 className="text-4xl font-black text-slate-950">Account</h1><p className="mt-2 text-sm text-slate-500">Browser-compatible profile migration while secure server auth is built.</p></div>
-        {currentUser ? <button onClick={logout} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-black">Log out</button> : null}
-      </div>
-      <form onSubmit={submit} className="mt-8 space-y-4 rounded-[32px] bg-white p-6 shadow-sm md:p-8">
-        {([
-          ["name", "Full name", "text"], ["email", "Email", "email"], ["phone", "Phone", "tel"], ["address", "Primary address", "text"],
-        ] as const).map(([key, label, type]) => (
-          <label key={key} className="block text-sm font-bold text-slate-700">{label}<input type={type} value={draft[key] || ""} onChange={(event) => setDraft((value) => ({ ...value, [key]: event.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-orange-400" /></label>
-        ))}
-        <label className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-700"><input type="checkbox" checked={Boolean(draft.preferences?.newsletter)} onChange={(event) => setDraft((value) => ({ ...value, preferences: { ...value.preferences, newsletter: event.target.checked } }))} /> Email me Zomax updates</label>
-        <button className="w-full rounded-2xl bg-orange-500 px-5 py-3 font-black text-white">Save profile</button>
-        {message ? <p className="text-center text-sm font-bold text-emerald-600">{message}</p> : null}
-      </form>
-      <section className="mt-6 rounded-[28px] bg-white p-6 shadow-sm">
-        <h2 className="font-black text-slate-950">Data tools</h2>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <button onClick={exportAccount} className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-black text-white">Export account</button>
-          <label className="cursor-pointer rounded-xl bg-slate-100 px-4 py-2 text-sm font-black">Import account<input type="file" accept="application/json" onChange={importAccount} className="hidden" /></label>
-          <button onClick={() => { if (window.confirm("Clear the local Zomax profile and session on this device?")) { deactivateLocalAccount(); setMessage("Local account cleared."); } }} className="rounded-xl bg-rose-50 px-4 py-2 text-sm font-black text-rose-700">Deactivate local profile</button>
+  if (!currentUser) {
+    return (
+      <main className="mx-auto max-w-3xl px-3 py-12 text-center sm:px-4 md:px-6">
+        <div className="rounded-[30px] bg-white p-7 shadow-sm ring-1 ring-[#eadfd7] sm:p-10">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-600">Your Zomax space</p>
+          <h1 className="mt-3 text-3xl font-black tracking-[-0.03em] text-[#2b211c] sm:text-4xl">Sign in to continue</h1>
+          <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-[#6b5a4f]">Keep orders, saved products and seller tools tied to the same account.</p>
+          <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+            <Link href="/login" className="rounded-2xl bg-orange-500 px-6 py-3 text-sm font-black text-white hover:bg-orange-600">Sign in</Link>
+            <Link href="/signup" className="rounded-2xl bg-[#fff1e7] px-6 py-3 text-sm font-black text-orange-700 ring-1 ring-orange-100">Create account</Link>
+          </div>
         </div>
-      </section>
+      </main>
+    );
+  }
+
+  return (
+    <main className="mx-auto max-w-4xl px-3 py-6 sm:px-4 sm:py-8 md:px-6 md:py-10">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div><p className="text-xs font-black uppercase tracking-[0.22em] text-orange-600">Profile</p><h1 className="mt-1 text-3xl font-black tracking-[-0.03em] text-[#2b211c] sm:text-4xl">Your account</h1><p className="mt-2 text-sm text-[#7a685d]">Account details used across shopping and seller flows.</p></div>
+        <button onClick={signOut} className="min-h-11 rounded-2xl border border-[#eadfd7] bg-white px-4 py-2 text-sm font-black text-[#5f5046] hover:border-orange-200 hover:text-orange-600">Log out</button>
+      </div>
+
+      <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_280px]">
+        <form onSubmit={submit} className="space-y-4 rounded-[30px] bg-white p-5 shadow-sm ring-1 ring-[#eadfd7] sm:p-6 md:p-8">
+          {([
+            ["name", "Full name", "text", "name"], ["email", "Email", "email", "email"], ["phone", "Phone", "tel", "tel"], ["address", "Primary address", "text", "street-address"],
+          ] as const).map(([key, label, type, autoComplete]) => (
+            <label key={key} className="block text-sm font-bold text-[#5f5046]">{label}<input type={type} autoComplete={autoComplete} value={draft[key] || ""} onChange={(event) => setDraft((value) => ({ ...value, [key]: event.target.value }))} className="mt-2 w-full rounded-2xl border border-[#eadfd7] bg-[#fffdfb] px-4 py-3.5 outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100" /></label>
+          ))}
+          <label className="flex items-start gap-3 rounded-2xl bg-[#faf7f4] p-4 text-sm font-bold text-[#5f5046]"><input type="checkbox" className="mt-1" checked={Boolean(draft.preferences?.newsletter)} onChange={(event) => setDraft((value) => ({ ...value, preferences: { ...value.preferences, newsletter: event.target.checked } }))} /><span>Email me useful Zomax updates</span></label>
+          <button className="min-h-12 w-full rounded-2xl bg-orange-500 px-5 py-3 font-black text-white hover:bg-orange-600">Save profile</button>
+          {message ? <p role="status" className="text-center text-sm font-bold text-emerald-700">{message}</p> : null}
+        </form>
+
+        <aside className="space-y-4">
+          <section className="rounded-[28px] bg-[#fff1e7] p-5 ring-1 ring-orange-100">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-orange-700">Account access</p>
+            <p className="mt-3 text-sm leading-6 text-[#6b5a4f]">Google, Apple, email/password and phone OTP are supported when the secure auth provider is configured.</p>
+            <Link href="/login" className="mt-4 inline-flex text-sm font-black text-orange-700">Manage sign-in →</Link>
+          </section>
+          <section className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-[#eadfd7]">
+            <h2 className="font-black text-[#2b211c]">Data tools</h2>
+            <div className="mt-4 grid gap-2">
+              <button onClick={exportAccount} className="min-h-11 rounded-2xl bg-[#2b211c] px-4 py-2 text-sm font-black text-white hover:bg-orange-600">Export account</button>
+              <label className="flex min-h-11 cursor-pointer items-center justify-center rounded-2xl bg-[#faf7f4] px-4 py-2 text-sm font-black text-[#5f5046] ring-1 ring-[#eadfd7]">Import account<input type="file" accept="application/json" onChange={importAccount} className="hidden" /></label>
+              <button onClick={() => { if (window.confirm("Clear the local Zomax profile and session on this device?")) { deactivateLocalAccount(); setMessage("Local account cleared."); } }} className="min-h-11 rounded-2xl bg-rose-50 px-4 py-2 text-sm font-black text-rose-700">Clear local profile</button>
+            </div>
+          </section>
+        </aside>
+      </div>
     </main>
   );
 }
