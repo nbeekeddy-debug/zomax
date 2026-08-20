@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { ProductActions } from "@/components/product-actions";
 import { money, type Product } from "@/lib/products";
 
@@ -25,6 +26,54 @@ export function ProductQuickView({ product }: { product: Product }) {
     };
   }, [open]);
 
+  const modal = open ? (
+    <div className="fixed inset-0 z-[90] grid place-items-end bg-black/45 p-0 backdrop-blur-[2px] sm:place-items-center sm:p-5" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
+      <section role="dialog" aria-modal="true" aria-label={`Quick view ${product.name}`} className="max-h-[92svh] w-full overflow-y-auto rounded-t-[30px] bg-[#fffdfb] shadow-2xl sm:max-w-4xl sm:rounded-[32px]">
+        <div className="flex items-center justify-between border-b border-[#eadfd7] px-5 py-4 sm:px-6">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#a63d08]">Quick view</p>
+            <p className="mt-1 text-sm font-bold text-[#594b42]">See the essentials without leaving the feed.</p>
+          </div>
+          <button type="button" onClick={() => setOpen(false)} className="grid h-10 w-10 place-items-center rounded-2xl border border-[#e5d9d1] bg-white text-lg font-black text-[#493a31] hover:bg-[#f7f2ee]" aria-label="Close quick view">×</button>
+        </div>
+
+        <div className="grid gap-0 md:grid-cols-[0.95fr_1.05fr]">
+          <div className="relative min-h-[300px] bg-[#f2ece7] sm:min-h-[390px]">
+            <Image src={product.image} alt={product.name} fill sizes="(min-width: 768px) 45vw, 100vw" className="object-cover" />
+          </div>
+
+          <div className="p-5 sm:p-7">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-[#f4eee9] px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[#594b42]">{product.category}</span>
+              <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-800">★ {product.rating} · {product.reviews} reviews</span>
+            </div>
+
+            <h2 className="mt-5 text-2xl font-black leading-tight tracking-[-0.035em] text-[#261d19] sm:text-3xl">{product.name}</h2>
+            <p className="mt-3 text-sm leading-6 text-[#594b42]">{product.description}</p>
+
+            <div className="mt-5 rounded-[24px] bg-[#f8f4f0] p-4 ring-1 ring-[#eadfd7]">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#75655b]">Seller</p>
+                  <p className="mt-1 font-black text-[#261d19]">{product.seller}</p>
+                  <p className="mt-1 text-xs font-semibold text-[#66574d]">{product.location}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-black tracking-[-0.035em] text-[#261d19]">{money(product.price)}</p>
+                  {product.oldPrice ? <p className="mt-1 text-xs font-bold text-[#75655b] line-through">{money(product.oldPrice)}</p> : null}
+                  <p className="mt-1 text-xs font-bold text-emerald-700">{product.stock} in stock</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5"><ProductActions productId={product.id} /></div>
+            <Link href={`/product/${product.id}`} className="mt-3 flex min-h-11 items-center justify-center rounded-2xl border border-[#dfd2ca] bg-white px-4 text-sm font-black text-[#493a31] hover:border-orange-300 hover:text-[#a63d08]">Open full product page →</Link>
+          </div>
+        </div>
+      </section>
+    </div>
+  ) : null;
+
   return (
     <>
       <button
@@ -35,54 +84,7 @@ export function ProductQuickView({ product }: { product: Product }) {
       >
         Quick view
       </button>
-
-      {open ? (
-        <div className="fixed inset-0 z-[90] grid place-items-end bg-black/45 p-0 backdrop-blur-[2px] sm:place-items-center sm:p-5" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
-          <section role="dialog" aria-modal="true" aria-label={`Quick view ${product.name}`} className="max-h-[92svh] w-full overflow-y-auto rounded-t-[30px] bg-[#fffdfb] shadow-2xl sm:max-w-4xl sm:rounded-[32px]">
-            <div className="flex items-center justify-between border-b border-[#eadfd7] px-5 py-4 sm:px-6">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#a63d08]">Quick view</p>
-                <p className="mt-1 text-sm font-bold text-[#594b42]">See the essentials without leaving the feed.</p>
-              </div>
-              <button type="button" onClick={() => setOpen(false)} className="grid h-10 w-10 place-items-center rounded-2xl border border-[#e5d9d1] bg-white text-lg font-black text-[#493a31] hover:bg-[#f7f2ee]" aria-label="Close quick view">×</button>
-            </div>
-
-            <div className="grid gap-0 md:grid-cols-[0.95fr_1.05fr]">
-              <div className="relative min-h-[300px] bg-[#f2ece7] sm:min-h-[390px]">
-                <Image src={product.image} alt={product.name} fill sizes="(min-width: 768px) 45vw, 100vw" className="object-cover" />
-              </div>
-
-              <div className="p-5 sm:p-7">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-[#f4eee9] px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[#594b42]">{product.category}</span>
-                  <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-800">★ {product.rating} · {product.reviews} reviews</span>
-                </div>
-
-                <h2 className="mt-5 text-2xl font-black leading-tight tracking-[-0.035em] text-[#261d19] sm:text-3xl">{product.name}</h2>
-                <p className="mt-3 text-sm leading-6 text-[#594b42]">{product.description}</p>
-
-                <div className="mt-5 rounded-[24px] bg-[#f8f4f0] p-4 ring-1 ring-[#eadfd7]">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#75655b]">Seller</p>
-                      <p className="mt-1 font-black text-[#261d19]">{product.seller}</p>
-                      <p className="mt-1 text-xs font-semibold text-[#66574d]">{product.location}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-black tracking-[-0.035em] text-[#261d19]">{money(product.price)}</p>
-                      {product.oldPrice ? <p className="mt-1 text-xs font-bold text-[#75655b] line-through">{money(product.oldPrice)}</p> : null}
-                      <p className="mt-1 text-xs font-bold text-emerald-700">{product.stock} in stock</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-5"><ProductActions productId={product.id} /></div>
-                <Link href={`/product/${product.id}`} className="mt-3 flex min-h-11 items-center justify-center rounded-2xl border border-[#dfd2ca] bg-white px-4 text-sm font-black text-[#493a31] hover:border-orange-300 hover:text-[#a63d08]">Open full product page →</Link>
-              </div>
-            </div>
-          </section>
-        </div>
-      ) : null}
+      {modal && typeof document !== "undefined" ? createPortal(modal, document.body) : null}
     </>
   );
 }
