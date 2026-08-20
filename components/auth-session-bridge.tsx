@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import type { Session } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient } from "@/lib/auth-client";
 import { useMarketplace } from "@/components/marketplace-provider";
 
@@ -11,7 +12,7 @@ export function AuthSessionBridge() {
     const supabase = getSupabaseBrowserClient();
     if (!supabase) return;
 
-    function sync(session: Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"]) {
+    function sync(session: Session | null) {
       const user = session?.user;
       if (!user) return;
       login({
