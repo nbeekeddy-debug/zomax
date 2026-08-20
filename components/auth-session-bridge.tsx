@@ -20,6 +20,7 @@ export function AuthSessionBridge() {
       const authSource = provider === "google" || provider === "apple" ? provider : user.phone ? "phone" : "email";
 
       login({
+        id: user.id,
         name: String(user.user_metadata?.full_name || user.user_metadata?.name || user.phone || user.email?.split("@")[0] || "Zomax user"),
         email: user.email || undefined,
         phone: user.phone || undefined,
