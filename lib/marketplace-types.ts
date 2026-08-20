@@ -1,7 +1,13 @@
 import type { Product } from "@/lib/products";
 
 export type CartItem = { id: number; qty: number };
-export type UserProfile = { name?: string; email?: string };
+export type UserProfile = {
+  name?: string;
+  email?: string;
+  phone?: string;
+  authSource?: "email" | "phone" | "google" | "apple";
+  preview?: boolean;
+};
 
 export type StoreInfo = {
   storeName?: string;
