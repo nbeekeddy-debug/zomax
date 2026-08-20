@@ -15,10 +15,10 @@ export function ProductCard({ product }: { product: Product }) {
           <Image src={product.image} alt={product.name} fill sizes="(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 50vw" className="object-cover transition duration-500 group-hover:scale-[1.035]" />
         </Link>
         <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between p-3">
-          <span className="rounded-full bg-white/92 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[#4d4038] backdrop-blur">{product.category}</span>
+          <span className="rounded-full bg-white/90 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[#4d4038] backdrop-blur">{product.category}</span>
           {discount > 0 ? <span className="rounded-full bg-[#c94b0b] px-2.5 py-1 text-[10px] font-black text-white">-{discount}%</span> : null}
         </div>
-        <div className="absolute bottom-3 right-3 translate-y-2 opacity-0 transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 focus-within:translate-y-0 focus-within:opacity-100">
+        <div className="absolute bottom-3 right-3 translate-y-0 opacity-100 transition duration-200 sm:translate-y-2 sm:opacity-0 sm:group-hover:translate-y-0 sm:group-hover:opacity-100 sm:focus-within:translate-y-0 sm:focus-within:opacity-100">
           <ProductQuickView product={product} />
         </div>
       </div>
