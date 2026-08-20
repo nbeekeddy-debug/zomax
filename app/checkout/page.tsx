@@ -26,6 +26,14 @@ export default function CheckoutPage() {
         address: String(form.get("address") || "").trim(),
       },
       paymentMethod: "Pay on delivery",
+      items: items.flatMap((item) => item.product ? [{
+        id: item.id,
+        qty: item.qty,
+        name: item.product.name,
+        unitPrice: item.product.price,
+        seller: item.product.seller,
+        image: item.product.image,
+      }] : []),
     });
     router.push(`/confirmation?order=${encodeURIComponent(String(order.id))}`);
   }
