@@ -1,12 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useMarketplace } from "@/components/marketplace-provider";
 
 const itemClass = "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 py-2 text-[10px] font-black text-[#6b5a4f] active:bg-orange-50";
+const authPaths = ["/login", "/signup", "/forgot-password"];
 
 export function MobileDock() {
+  const pathname = usePathname();
   const { cartCount, wishlist, currentUser } = useMarketplace();
+
+  if (authPaths.some((path) => pathname.startsWith(path))) return null;
 
   return (
     <nav aria-label="Mobile navigation" className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-5 rounded-[24px] border border-[#eadfd7] bg-white/95 p-1.5 shadow-[0_18px_50px_rgba(88,66,51,0.18)] backdrop-blur-xl md:hidden">
