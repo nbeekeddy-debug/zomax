@@ -2,12 +2,15 @@
 
 :root {
   --brand: #f97316;
-  --brand-dark: #ea580c;
-  --ink: #2b211c;
-  --muted-ink: #6b5a4f;
+  --brand-dark: #c2410c;
+  --brand-action: #c94b0b;
+  --ink: #261d19;
+  --text-secondary: #594b42;
+  --text-muted: #66574d;
+  --text-soft: #75655b;
   --surface: #f8f4f0;
   --paper: #fffdfb;
-  --line: #eadfd7;
+  --line: #dfd2ca;
 }
 
 * { box-sizing: border-box; }
@@ -23,8 +26,8 @@ body {
   min-height: 100vh;
   overflow-x: clip;
   background:
-    radial-gradient(circle at 10% -10%, rgba(249, 115, 22, 0.10), transparent 30%),
-    radial-gradient(circle at 90% 0%, rgba(168, 123, 92, 0.07), transparent 25%),
+    radial-gradient(circle at 10% -10%, rgba(249, 115, 22, 0.08), transparent 30%),
+    radial-gradient(circle at 90% 0%, rgba(168, 123, 92, 0.05), transparent 25%),
     var(--surface);
   color: var(--ink);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -39,16 +42,82 @@ button, a { -webkit-tap-highlight-color: transparent; }
 
 ::selection {
   background: rgba(249, 115, 22, 0.18);
-  color: #2b211c;
+  color: var(--ink);
+}
+
+::placeholder {
+  color: #78675d;
+  opacity: 1;
 }
 
 :focus-visible {
-  outline: 2px solid var(--brand);
+  outline: 2px solid var(--brand-dark);
   outline-offset: 3px;
 }
 
+/*
+ * Readability layer
+ * The visual system still uses Zomax orange, but small copy must not compete
+ * with the surfaces behind it. These overrides intentionally strengthen the
+ * low-contrast utility colors used throughout the migrated frontend.
+ */
+.text-slate-400 { color: #75655b !important; }
+.text-slate-500 { color: #66574d !important; }
+.text-slate-600 { color: #594b42 !important; }
+.text-orange-500,
+.text-orange-600 { color: #b45309 !important; }
+
+[class~="text-[#a18e81]"],
+[class~="text-[#9a887c]"],
+[class~="text-[#aa9a8f]"],
+[class~="text-[#8c786b]"],
+[class~="text-[#8a776a]"] {
+  color: #65554b !important;
+}
+
+[class~="placeholder:text-[#aa9a8f]"]::placeholder,
+[class~="placeholder:text-slate-400"]::placeholder {
+  color: #78675d !important;
+  opacity: 1;
+}
+
+/* Bright orange remains a brand accent; text buttons use a deeper orange so
+   white labels keep strong contrast at normal font sizes. */
+.bg-orange-500.text-white,
+.bg-orange-600.text-white,
+button.bg-orange-500,
+a.bg-orange-500,
+button.bg-orange-600,
+a.bg-orange-600 {
+  background-color: var(--brand-action) !important;
+}
+
+.bg-orange-500.text-white:hover,
+.bg-orange-600.text-white:hover,
+button.bg-orange-500:hover,
+a.bg-orange-500:hover,
+button.bg-orange-600:hover,
+a.bg-orange-600:hover {
+  background-color: #a83a08 !important;
+}
+
+/* Preserve readable light copy inside the few intentionally dark surfaces. */
+.bg-slate-950 .text-slate-400,
+.bg-slate-950 .text-slate-500,
+.bg-slate-900 .text-slate-400,
+.bg-slate-900 .text-slate-500,
+[class*="bg-[#2b211c]"] .text-slate-400,
+[class*="bg-[#2b211c]"] .text-slate-500 {
+  color: #d6d3d1 !important;
+}
+
+[aria-disabled="true"],
+:disabled {
+  opacity: 0.58;
+}
+
 ::-webkit-scrollbar { height: 8px; width: 8px; }
-::-webkit-scrollbar-thumb { background: #d8c9bf; border-radius: 999px; }
+::-webkit-scrollbar-thumb { background: #d0c0b7; border-radius: 999px; }
 ::-webkit-scrollbar-track { background: transparent; }
 
 @media (max-width: 767px) {
