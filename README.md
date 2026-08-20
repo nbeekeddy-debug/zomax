@@ -25,13 +25,15 @@ npm run check
 
 ## Architecture
 
-- `app/` — Next.js App Router routes, loading states and error boundaries.
+- `app/` — Next.js App Router routes, metadata, loading states and error boundaries.
 - `components/` — reusable server/client marketplace components.
 - `lib/catalog.ts` — resilient catalog adapter with API timeout, validation and seed fallback.
 - `lib/marketplace-storage.ts` — versioned guest/user browser-state isolation helpers.
 - `lib/auth-flow.ts` — Supabase-ready auth adapter with explicit frontend-preview mode.
-- `public/sw.js` + `app/manifest.ts` — PWA install/offline foundation.
-- `tests/` — regression tests for critical frontend state behavior.
+- `lib/site.ts` — canonical URL helper for sitemap, robots and metadata.
+- `public/sw.js` + `app/manifest.ts` — PWA install/offline/update foundation.
+- `tests/` — regression tests for critical frontend behavior.
+- `docs/legacy.md` — history and compatibility notes for the removed vanilla frontend.
 
 Private prototype data such as account details, orders and seller listings is namespaced per signed-in identity on the device. Guest cart/wishlist data can intentionally merge into an account on login; switching between signed-in users does not merge private state.
 
@@ -39,4 +41,4 @@ Set `ZOMAX_API_URL` to a full backend origin when the product API is ready. If i
 
 The current Vercel deployment explicitly uses frontend auth preview mode while the secure backend is not connected. Before production launch, remove preview mode and configure Supabase Auth/provider credentials.
 
-Legacy `index.html`, `main.js` and redirect HTML files remain temporarily for parity/reference and should be archived or removed after the final parity audit.
+The old `index.html`, `main.js`, route redirect files, legacy stylesheet/assets and JSON fixtures have been removed from the active tree. They remain recoverable through Git history, while `next.config.ts` preserves old `.html` URLs with permanent redirects.
