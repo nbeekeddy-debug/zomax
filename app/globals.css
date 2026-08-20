@@ -4,7 +4,8 @@
   --brand: #f97316;
   --brand-dark: #ea580c;
   --ink: #172033;
-  --surface: #eef1f3;
+  --surface: #f7f4f1;
+  --paper: #fffdfb;
 }
 
 * { box-sizing: border-box; }
@@ -18,7 +19,8 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    linear-gradient(to bottom, rgba(249, 115, 22, 0.035), transparent 280px),
+    radial-gradient(circle at 10% -10%, rgba(249, 115, 22, 0.10), transparent 30%),
+    radial-gradient(circle at 90% 0%, rgba(15, 23, 42, 0.06), transparent 25%),
     var(--surface);
   color: var(--ink);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -26,19 +28,22 @@ body {
 }
 
 a { color: inherit; text-decoration: none; }
-
 button, input, select, textarea { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 
 ::selection {
-  background: rgba(249, 115, 22, 0.2);
+  background: rgba(249, 115, 22, 0.18);
   color: #0f172a;
 }
 
 :focus-visible {
   outline: 2px solid var(--brand);
-  outline-offset: 2px;
+  outline-offset: 3px;
 }
+
+::-webkit-scrollbar { height: 8px; width: 8px; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+::-webkit-scrollbar-track { background: transparent; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
