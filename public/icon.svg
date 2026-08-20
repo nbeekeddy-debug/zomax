@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Zomax">
+  <rect width="512" height="512" rx="118" fill="#f97316"/>
+  <path d="M126 137h260v66L226 309h160v66H126v-66l160-106H126z" fill="#fff"/>
+  <circle cx="388" cy="375" r="22" fill="#172033"/>
+</svg>
