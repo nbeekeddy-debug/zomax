@@ -2,6 +2,7 @@ import type { Product } from "@/lib/products";
 
 export type CartItem = { id: number; qty: number };
 export type UserProfile = {
+  id?: string;
   name?: string;
   email?: string;
   phone?: string;
@@ -38,9 +39,16 @@ export type Account = {
   storeInfo?: StoreInfo;
 };
 
+export type OrderItem = CartItem & {
+  name?: string;
+  unitPrice?: number;
+  seller?: string;
+  image?: string;
+};
+
 export type Order = {
   id: string | number;
-  items: CartItem[];
+  items: OrderItem[];
   total?: number;
   customer?: { name?: string; email?: string; address?: string };
   paymentMethod?: string;
@@ -50,10 +58,11 @@ export type Order = {
 
 export type Review = {
   author: string;
+  authorId?: string;
   rating: number;
   text: string;
   createdAt: number;
 };
 
 export type ReviewsStore = Record<string, Review[]>;
-export type SellerListing = Product;
+export type SellerListing = Product & { ownerId?: string };
