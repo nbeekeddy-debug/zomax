@@ -3,6 +3,8 @@ import "./globals.css";
 import { MarketplaceProvider } from "@/components/marketplace-provider";
 import { PwaRuntime } from "@/components/pwa-runtime";
 import { SiteHeader } from "@/components/site-header";
+import { MobileDock } from "@/components/mobile-dock";
+import { AuthSessionBridge } from "@/components/auth-session-bridge";
 
 export const metadata: Metadata = {
   title: {
@@ -33,8 +35,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <MarketplaceProvider>
           <PwaRuntime />
+          <AuthSessionBridge />
           <SiteHeader />
           {children}
+          <MobileDock />
         </MarketplaceProvider>
       </body>
     </html>
