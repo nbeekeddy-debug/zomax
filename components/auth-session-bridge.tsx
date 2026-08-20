@@ -1,12 +1,19 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient } from "@/lib/auth-client";
 import { useMarketplace } from "@/components/marketplace-provider";
 
 export function AuthSessionBridge() {
   const { login, logout } = useMarketplace();
+  const loginRef = useRef(login);
+  const logoutRef = useRef(logout);
+
+  useEffect(() => {
+    loginRef.current = login;
+    logoutRef.current = logout;
+  }, [login, logout]);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -15,14 +22,14 @@ export function AuthSessionBridge() {
     function sync(session: Session | null) {
       const user = session?.user;
       if (!user) {
-        logout();
+        logoutRef.current();
         return;
       }
 
       const provider = String(user.app_metadata?.provider || "");
       const authSource = provider === "google" || provider === "apple" ? provider : user.phone ? "phone" : "email";
 
-      login({
+      loginRef.current({
         id: user.id,
         name: String(user.user_metadata?.full_name || user.user_metadata?.name || user.phone || user.email?.split("@")[0] || "Zomax user"),
         email: user.email || undefined,
@@ -34,7 +41,7 @@ export function AuthSessionBridge() {
     void supabase.auth.getSession().then(({ data }) => sync(data.session));
     const { data } = supabase.auth.onAuthStateChange((_event, session) => sync(session));
     return () => data.subscription.unsubscribe();
-  }, [login, logout]);
+  }, []);
 
   return null;
 }
