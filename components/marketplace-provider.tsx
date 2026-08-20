@@ -106,17 +106,20 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
   }
 
   useEffect(() => {
-    const legacyUser = readLocal<UserProfile | null>("zomax_currentUser", null);
+    const legacyMigrated = window.localStorage.getItem(migrationMarkerKey) === "1";
+    const legacyUser = legacyMigrated ? null : readLocal<UserProfile | null>("zomax_currentUser", null);
     const sessionUser = readLocal<UserProfile | null>(sessionUserKey, legacyUser);
     const initialScope = storageScope(sessionUser);
-    const legacyMigrated = window.localStorage.getItem(migrationMarkerKey) === "1";
 
     setCurrentUser(sessionUser);
     setScope(initialScope);
     applyPrivateSnapshot(readPrivateSnapshot(initialScope, !legacyMigrated));
     setReviews(readLocal<ReviewsStore>(sharedReviewsKey, readLocal<ReviewsStore>("zomax_reviews", {})));
 
-    if (!legacyMigrated) window.localStorage.setItem(migrationMarkerKey, "1");
+    if (!legacyMigrated) {
+      window.localStorage.setItem(migrationMarkerKey, "1");
+      window.localStorage.removeItem("zomax_currentUser");
+    }
     setHydrated(true);
   }, []);
 
@@ -230,10 +233,18 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
 
       const next = readPrivateSnapshot(nextScope);
       const fromGuest = scope === "guest";
+      const mergedCart = fromGuest ? mergeCart(next.cart, cart) : next.cart;
+      const mergedWishlist = fromGuest ? mergeWishlist(next.wishlist, wishlist) : next.wishlist;
+
+      if (fromGuest) {
+        writeLocal(scopedStorageKey("guest", "cart"), []);
+        writeLocal(scopedStorageKey("guest", "wishlist"), []);
+      }
+
       applyPrivateSnapshot({
         ...next,
-        cart: fromGuest ? mergeCart(next.cart, cart) : next.cart,
-        wishlist: fromGuest ? mergeWishlist(next.wishlist, wishlist) : next.wishlist,
+        cart: mergedCart,
+        wishlist: mergedWishlist,
         account: {
           ...next.account,
           name: next.account.name || user.name,
