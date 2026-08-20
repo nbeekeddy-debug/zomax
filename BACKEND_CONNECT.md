@@ -1,119 +1,228 @@
-# Backend Integration Guide — Connect to Zomax Frontend
+# Zomax backend integration contract
 
-Purpose
-- Provide a minimal, actionable guide for backend dev to connect a server to the existing frontend.
+This document describes the backend boundary for the current Next.js application.
 
-Overview
-- The frontend is a static single-page app that expects REST endpoints under the `/api` namespace.
-- For local development the frontend falls back to `data/*.json` and `localStorage`.
+## Current frontend state
 
-Where to look in the repo
-- Frontend entry: [index.html](index.html)
-- Client logic: [main.js](main.js)
-- Static sample data: `data/` (e.g., `data/products.json`, `data/reviews.json`)
+- Next.js App Router is the active frontend.
+- `lib/catalog.ts` already supports a server catalog through `ZOMAX_API_URL`.
+- Supabase Auth is the intended secure authentication provider.
+- Cart, wishlist, account, orders, reviews and seller listings still have browser-local compatibility storage while the database layer is being built.
+- Browser-local data is namespaced per signed-in identity; it is not the production persistence model.
 
-Required endpoints (HTTP JSON)
-- GET /api/products -> Array of product objects
-- POST /api/products -> Create a product; returns created product
-- GET /api/products/:id/reviews -> Array of reviews
-- POST /api/products/:id/reviews -> Add a review; returns review
-- DELETE /api/products/:id/reviews/:index -> Delete review by index
-- POST /api/reviews -> Replace all reviews (object mapping productId -> reviews[])
-- GET /api/cart, POST /api/cart -> Cart array of { id, qty }
-- GET /api/wishlist, POST /api/wishlist -> Wishlist array
-- GET /api/orders, POST /api/orders -> Orders array
-- GET /api/account, POST /api/account -> Account object
-- GET /api/auth/current-user -> current user or null
-- POST /api/auth/login -> Accepts user object, returns same
-- POST /api/auth/logout -> Clears session, returns { success: true }
- - POST /api/account/export -> Trigger account export (optional)
- - DELETE /api/account -> Delete/deactivate account (optional)
- - GET /api/analytics/revenue -> Returns revenue/orders timeseries and moving averages
+## Existing live adapter
 
-Data shapes (summary)
-- Product:
-  - id, name, category, price, oldPrice?, rating?, reviews?, seller?, location?, image?, images?, description?, stock?, createdAt?
-- Review:
-  - author, rating, text, createdAt (number or ISO string)
-- Order (minimal): id, items:[{id,qty}], total, customer:{name,email}, status, date
-- Account: see default empty object used in `main.js`
+Set:
 
-Implementation notes
-- CORS: enable CORS for the frontend origin or allow `*` for local dev.
-- Content-Type: all endpoints accept and return `application/json`.
-- IDs: frontend often treats `id` as a number; keep types consistent.
-- Reviews: frontend addresses reviews by product `id` and a numeric index — the server may return arrays and support delete-by-index.
-- Auth: frontend uses a lightweight flow. `POST /api/auth/login` should return the user object (no token required for current UI). For production, implement secure auth and update the frontend accordingly.
+```env
+ZOMAX_API_URL=https://api.example.com
+```
 
-Suggested dev workflow
-1. Implement the endpoints on `http://localhost:3000` (or same origin as static files).
-2. Start the backend and serve the frontend using a static server (or configure reverse proxy).
-3. Use the existing `data/*.json` as sample payloads for quick seeding.
+The frontend currently requests:
 
-Testing examples (curl)
-- List products:
-  curl -sS http://localhost:3000/api/products
-- Add review:
-  curl -X POST -H "Content-Type: application/json" -d '{"author":"You","rating":5,"text":"Nice"}' http://localhost:3000/api/products/123/reviews
+```text
+GET {ZOMAX_API_URL}/api/products
+```
 
-Tips for compatibility
-- Keep response shapes lenient: include missing optional fields with sensible defaults.
-- If you change endpoint paths, update `main.js` accordingly.
-- When in doubt, mirror the shapes found in `data/`.
+`lib/catalog.ts` validates the payload, times out failed requests and falls back to the seed catalog instead of crashing the page.
 
-Analytics: Revenue & order trend
-- The frontend displays a summary and chart data for revenue and orders. The backend should provide aggregated timeseries and optional moving averages to smooth short-term variation.
-- Support query parameters: `?start=YYYY-MM-DD&end=YYYY-MM-DD&granularity=daily|weekly|monthly&movingAverageWindow=3` where `movingAverageWindow` is optional (days).
-- Response should include labels, raw series and computed moving averages. Example response for daily granularity:
+### Product response
+
+```json
+[
+  {
+    "id": 101,
+    "name": "Wireless Noise-Cancelling Headphones",
+    "category": "Electronics",
+    "price": 68000,
+    "oldPrice": 75000,
+    "rating": 4.8,
+    "reviews": 124,
+    "seller": "Zomax Tech Hub",
+    "location": "Lagos",
+    "image": "https://...",
+    "description": "...",
+    "stock": 18
+  }
+]
+```
+
+Prices are integer NGN values in the current frontend model.
+
+## Recommended production endpoints
+
+The exact transport can be Next Route Handlers, Supabase/PostgREST or a separate API. Keep the frontend adapters stable even if the backend implementation changes.
+
+### Products / inventory
+
+```text
+GET    /api/products
+GET    /api/products/:id
+POST   /api/products                 seller only
+PATCH  /api/products/:id             owning seller only
+DELETE /api/products/:id             owning seller only
+```
+
+The server must own inventory counts, prices and seller ownership. Never trust price or stock values submitted by the browser during checkout.
+
+### Reviews
+
+```text
+GET    /api/products/:id/reviews
+POST   /api/products/:id/reviews     authenticated user
+PATCH  /api/reviews/:reviewId        review owner only
+DELETE /api/reviews/:reviewId        review owner/moderator only
+```
+
+Use stable review IDs. Do not use the old delete-by-array-index behavior.
+
+Suggested review shape:
+
+```json
+{
+  "id": "review_uuid",
+  "productId": 101,
+  "authorId": "user_uuid",
+  "author": "Display name",
+  "rating": 5,
+  "text": "Great product",
+  "createdAt": "2026-08-20T12:00:00Z"
+}
+```
+
+### Cart and wishlist
+
+```text
+GET    /api/cart
+PUT    /api/cart
+GET    /api/wishlist
+PUT    /api/wishlist
+```
+
+These endpoints are optional if Supabase tables with RLS are used directly. Either way, records must be scoped to the authenticated user.
+
+### Orders / checkout
+
+```text
+GET    /api/orders
+GET    /api/orders/:id
+POST   /api/orders
+```
+
+The order request should send product IDs, quantities, delivery details and the selected payment method. The server must recalculate totals from authoritative product prices before creating the order.
+
+Recommended stored order item snapshot:
+
+```json
+{
+  "productId": 101,
+  "qty": 2,
+  "name": "Wireless Noise-Cancelling Headphones",
+  "unitPrice": 68000,
+  "sellerId": "seller_uuid",
+  "sellerName": "Zomax Tech Hub",
+  "image": "https://..."
+}
+```
+
+This keeps historical orders readable even if the product is later renamed or removed.
+
+### Account
+
+```text
+GET    /api/account
+PATCH  /api/account
+DELETE /api/account
+POST   /api/account/export
+```
+
+Do not expose secrets, provider tokens or password material in account payloads.
+
+### Seller store
+
+```text
+GET    /api/seller/store
+PATCH  /api/seller/store
+GET    /api/seller/orders
+GET    /api/seller/analytics
+```
+
+Seller authorization must be enforced server-side. The current frontend guards are UX protection only.
+
+### Analytics
+
+Suggested request:
+
+```text
+GET /api/seller/analytics?start=2026-08-01&end=2026-08-31&granularity=daily
+```
+
+Suggested response:
 
 ```json
 {
   "summary": {
     "totalRevenue": 183000,
     "orders": 245,
-    "avgOrderValue": 746.94,
-    "refunds": 1200,
-    "repeatCustomers": 42,
-    "conversionRate": 2.7
+    "avgOrderValue": 746.94
   },
-  "labels": ["2026-08-01","2026-08-02","2026-08-03","2026-08-04","2026-08-05","2026-08-06","2026-08-07"],
-  "revenue": [12000,18000,24000,30000,41000,35000,58000],
-  "orders": [4,7,9,11,14,12,18],
-  "revenueMovingAvg": [null,15000,18000,23000,31666.67,31666.67,41000],
-  "ordersMovingAvg": [null,5.5,6.6667,7.75,10.25,12.3333,14.6667],
-  "topProducts": [{ "id":123, "name":"X", "qty":40, "revenue":40000 }]
+  "labels": ["2026-08-01", "2026-08-02"],
+  "revenue": [12000, 18000],
+  "ordersSeries": [4, 7],
+  "topProducts": [
+    { "id": 101, "name": "Headphones", "qty": 40, "revenue": 40000 }
+  ]
 }
 ```
 
-- Notes on moving averages:
-  - Use `null` (or omit) for positions where the window cannot be computed.
-  - The server should compute simple moving averages over the requested window (e.g., 3-day SMA) and return them as numeric arrays aligned with `labels`.
-  - For large ranges, allow the client to request summarised buckets (weekly/monthly) to reduce payload size.
+## Authentication
 
-Example analytics request
-```
-GET /api/analytics/revenue?start=2026-08-01&end=2026-08-07&granularity=daily&movingAverageWindow=3
-```
+The frontend already contains a Supabase Auth adapter for:
 
-Example response (explained)
-```json
-{
-  "summary": { "totalRevenue": 183000, "orders": 245, "avgOrderValue": 746.94 },
-  "labels": ["2026-08-01","2026-08-02","2026-08-03","2026-08-04","2026-08-05","2026-08-06","2026-08-07"],
-  "revenue": [12000,18000,24000,30000,41000,35000,58000],
-  "orders": [4,7,9,11,14,12,18],
-  "revenueMovingAvg": [null,15000,18000,23000,31666.67,31666.67,41000],
-  "ordersMovingAvg": [null,5.5,6.6667,7.75,10.25,12.3333,14.6667]
-}
+- Email/password
+- Nigerian phone number + SMS OTP
+- Google OAuth
+- Apple OAuth
+
+Configure:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 ```
 
-Server implementation notes
-- Compute SMA using a simple sliding window. Return `null` for indices before the window is full.
-- Keep labels in ISO `YYYY-MM-DD` and align all arrays to labels length.
-- Consider caching aggregated results for performance on large datasets.
+Frontend preview auth is intentionally temporary. Before handling real users, disable preview mode and enforce database Row Level Security / server authorization.
 
-Contact
-- If you need exact sample responses or fixtures, open `data/` files or ask the frontend maintainer.
+## Payments
 
--- End of guide
-yoo
+The current checkout uses pay-on-delivery and intentionally collects no card details.
+
+A production gateway integration should:
+
+1. create a server-side payment/order intent;
+2. calculate the authoritative amount on the server;
+3. redirect/open the provider checkout without exposing secret keys;
+4. verify provider webhooks server-side;
+5. update order payment status idempotently;
+6. never mark an order paid from a browser callback alone.
+
+## Security requirements
+
+- Validate all request bodies server-side.
+- Derive user/seller identity from the authenticated session, never a client-supplied owner ID.
+- Use RLS or equivalent authorization for every user-owned table.
+- Use stable UUIDs for users, sellers, orders and reviews.
+- Enforce inventory changes transactionally during order creation.
+- Use idempotency keys for order/payment creation.
+- Rate-limit auth-sensitive, review and checkout endpoints.
+- Keep secrets in server-only environment variables.
+- Store seller images in controlled object storage rather than arbitrary browser-local URLs.
+
+## Frontend integration points
+
+- Catalog: `lib/catalog.ts`
+- Auth: `lib/auth-client.ts`, `lib/auth-flow.ts`
+- Marketplace compatibility state: `components/marketplace-provider.tsx`
+- Shared data types: `lib/marketplace-types.ts`
+
+As each production adapter comes online, replace one browser-local domain at a time instead of rewriting the UI.
