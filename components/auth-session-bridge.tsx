@@ -6,7 +6,7 @@ import { getSupabaseBrowserClient } from "@/lib/auth-client";
 import { useMarketplace } from "@/components/marketplace-provider";
 
 export function AuthSessionBridge() {
-  const { login } = useMarketplace();
+  const { login, logout } = useMarketplace();
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -14,7 +14,10 @@ export function AuthSessionBridge() {
 
     function sync(session: Session | null) {
       const user = session?.user;
-      if (!user) return;
+      if (!user) {
+        logout();
+        return;
+      }
 
       const provider = String(user.app_metadata?.provider || "");
       const authSource = provider === "google" || provider === "apple" ? provider : user.phone ? "phone" : "email";
@@ -31,7 +34,7 @@ export function AuthSessionBridge() {
     void supabase.auth.getSession().then(({ data }) => sync(data.session));
     const { data } = supabase.auth.onAuthStateChange((_event, session) => sync(session));
     return () => data.subscription.unsubscribe();
-  }, [login]);
+  }, [login, logout]);
 
   return null;
 }
