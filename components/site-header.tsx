@@ -1,25 +1,54 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useMarketplace } from "@/components/marketplace-provider";
 import { categories } from "@/lib/products";
 
+const authPaths = ["/login", "/signup", "/forgot-password"];
+
+function Brand() {
+  return (
+    <Link href="/" className="group flex shrink-0 items-center gap-2 rounded-2xl px-1.5 py-1">
+      <span className="grid h-9 w-9 place-items-center rounded-2xl bg-[#2b211c] text-sm font-black text-white shadow-sm transition group-hover:-rotate-3 group-hover:bg-orange-600">Z</span>
+      <span className="text-2xl font-black tracking-[-0.04em] text-[#2b211c]">zomax<span className="text-orange-500">.</span></span>
+    </Link>
+  );
+}
+
 export function SiteHeader() {
+  const pathname = usePathname();
   const { cartCount, wishlist, currentUser } = useMarketplace();
+  const authPage = authPaths.some((path) => pathname.startsWith(path));
+
+  if (authPage) {
+    const signup = pathname.startsWith("/signup");
+    return (
+      <header className="sticky top-0 z-40 border-b border-[#eadfd7]/90 bg-[#fffaf5]/95 backdrop-blur-xl">
+        <div className="h-1 bg-gradient-to-r from-orange-600 via-orange-400 to-amber-300" />
+        <div className="mx-auto flex min-h-[70px] max-w-[1120px] items-center justify-between gap-3 px-4 sm:px-6">
+          <Brand />
+          <div className="flex items-center gap-2">
+            <Link href="/shop" className="hidden rounded-xl px-3 py-2 text-xs font-black text-[#806c60] hover:bg-white hover:text-orange-600 sm:block">← Back to marketplace</Link>
+            <Link href={signup ? "/login" : "/signup"} className="rounded-2xl border border-[#e4d8d0] bg-white px-4 py-2.5 text-xs font-black text-[#493a31] shadow-sm hover:border-orange-200 hover:text-orange-600 sm:text-sm">
+              {signup ? "Sign in" : "Create account"}
+            </Link>
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="sticky top-0 z-40 border-b border-[#eadfd7]/90 bg-[#fffaf5]/95 backdrop-blur-xl">
       <div className="h-1 bg-gradient-to-r from-orange-600 via-orange-400 to-amber-300" />
 
       <div className="mx-auto flex max-w-[1480px] flex-wrap items-center gap-2.5 px-3 py-2.5 sm:gap-3 md:flex-nowrap md:px-6 md:py-3">
-        <Link href="/" className="group flex shrink-0 items-center gap-2 rounded-2xl px-1.5 py-1">
-          <span className="grid h-9 w-9 place-items-center rounded-2xl bg-[#2b211c] text-sm font-black text-white shadow-sm transition group-hover:-rotate-3 group-hover:bg-orange-600">Z</span>
-          <span className="hidden text-2xl font-black tracking-[-0.04em] text-[#2b211c] xs:block sm:block">zomax<span className="text-orange-500">.</span></span>
-        </Link>
+        <Brand />
 
         <form action="/shop" method="get" className="order-3 flex min-w-0 basis-full items-center rounded-[20px] border border-[#e8ddd5] bg-white p-1.5 shadow-[0_8px_26px_rgba(88,66,51,0.06)] focus-within:border-orange-300 focus-within:ring-4 focus-within:ring-orange-100 md:order-none md:mx-auto md:max-w-2xl md:flex-1 md:basis-auto">
           <span className="pl-3 text-[#9a887c]">⌕</span>
-          <input name="q" type="search" placeholder="Find products, sellers or locations" className="min-w-0 flex-1 bg-transparent px-2.5 py-2 text-sm text-[#2b211c] outline-none placeholder:text-[#9a887c] sm:px-3" />
+          <input name="q" type="search" placeholder="Find products, sellers or locations" className="min-w-0 flex-1 bg-transparent px-2.5 py-2 text-[16px] text-[#2b211c] outline-none placeholder:text-[#9a887c] sm:px-3 sm:text-sm" />
           <button type="submit" className="rounded-2xl bg-orange-500 px-3.5 py-2 text-xs font-black text-white transition hover:bg-orange-600 sm:px-5 sm:text-sm">Search</button>
         </form>
 

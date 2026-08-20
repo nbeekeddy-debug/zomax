@@ -15,9 +15,15 @@ export function AuthSessionBridge() {
     function sync(session: Session | null) {
       const user = session?.user;
       if (!user) return;
+
+      const provider = String(user.app_metadata?.provider || "");
+      const authSource = provider === "google" || provider === "apple" ? provider : user.phone ? "phone" : "email";
+
       login({
         name: String(user.user_metadata?.full_name || user.user_metadata?.name || user.phone || user.email?.split("@")[0] || "Zomax user"),
         email: user.email || undefined,
+        phone: user.phone || undefined,
+        authSource,
       });
     }
 

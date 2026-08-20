@@ -2,213 +2,310 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
-import { getSupabaseBrowserClient } from "@/lib/auth-client";
+import { type FormEvent, useMemo, useState } from "react";
+import {
+  isSecureAuthConfigured,
+  sendPhoneOtp,
+  signInWithEmail,
+  signUpWithEmail,
+  startSocialAuth,
+  verifyPhoneOtp,
+  type AuthProvider,
+  type AuthResult,
+} from "@/lib/auth-flow";
 import { useMarketplace } from "@/components/marketplace-provider";
 
 type Mode = "login" | "signup";
-type Provider = "google" | "apple";
+type Method = "email" | "phone";
+type Notice = { tone: "error" | "success" | "info"; text: string } | null;
+type FieldErrors = Partial<Record<"name" | "email" | "password" | "confirmPassword" | "phone" | "otp", string>>;
 
 function GoogleMark() {
-  return <span aria-hidden className="grid h-7 w-7 place-items-center rounded-full bg-white text-sm font-black text-[#4285f4] ring-1 ring-slate-200">G</span>;
+  return <span aria-hidden className="grid h-8 w-8 place-items-center rounded-full bg-white text-sm font-black text-[#4285f4] ring-1 ring-[#e5e7eb]">G</span>;
 }
 
 function AppleMark() {
-  return <span aria-hidden className="grid h-7 w-7 place-items-center rounded-full bg-[#2b211c] text-sm font-black text-white">●</span>;
+  return <span aria-hidden className="grid h-8 w-8 place-items-center rounded-full bg-[#2b211c] text-sm font-black text-white">●</span>;
+}
+
+function normalizeNigerianPhone(value: string) {
+  const digits = value.replace(/\D/g, "");
+  if (digits.startsWith("234")) return `+${digits}`;
+  if (digits.startsWith("0")) return `+234${digits.slice(1)}`;
+  return `+234${digits}`;
+}
+
+function fieldClass(hasError?: boolean) {
+  return `mt-2 min-h-12 w-full rounded-2xl border bg-white px-4 text-[16px] text-[#2b211c] outline-none transition placeholder:text-[#aa9a8f] ${
+    hasError
+      ? "border-rose-300 ring-4 ring-rose-50 focus:border-rose-400"
+      : "border-[#e6ddd7] focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
+  }`;
+}
+
+function noticeClass(tone: Notice extends infer _ ? "error" | "success" | "info" : never) {
+  if (tone === "error") return "border-rose-200 bg-rose-50 text-rose-800";
+  if (tone === "success") return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  return "border-orange-200 bg-orange-50 text-orange-800";
 }
 
 export function AuthScreen({ mode }: { mode: Mode }) {
   const router = useRouter();
-  const { login } = useMarketplace();
+  const { login, logout, currentUser } = useMarketplace();
+  const secureAuth = isSecureAuthConfigured();
+  const isSignup = mode === "signup";
+
+  const [method, setMethod] = useState<Method>("email");
   const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState("");
-  const [phone, setPhone] = useState("+234 ");
+  const [notice, setNotice] = useState<Notice>(null);
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
+  const [previewCode, setPreviewCode] = useState<string | undefined>();
 
-  const isSignup = mode === "signup";
+  const passwordScore = useMemo(() => {
+    let score = 0;
+    if (password.length >= 8) score += 1;
+    if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score += 1;
+    if (/\d/.test(password)) score += 1;
+    if (/[^A-Za-z0-9]/.test(password)) score += 1;
+    return score;
+  }, [password]);
+
+  function complete(result: AuthResult, successDestination = "/account") {
+    if (!result.ok) {
+      setNotice({ tone: "error", text: result.message });
+      return;
+    }
+
+    if (result.previewCode) setPreviewCode(result.previewCode);
+    if (result.user) {
+      login(result.user);
+      setNotice({ tone: "success", text: result.message || "You are signed in." });
+      router.push(successDestination);
+      return;
+    }
+
+    if (result.needsEmailVerification) {
+      setNotice({ tone: "success", text: result.message || "Check your email to continue." });
+      return;
+    }
+
+    if (result.message) setNotice({ tone: "info", text: result.message });
+  }
+
+  function validateEmailForm() {
+    const next: FieldErrors = {};
+    if (isSignup && name.trim().length < 2) next.name = "Enter your full name.";
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) next.email = "Enter a valid email address.";
+    if (password.length < 8) next.password = "Use at least 8 characters.";
+    if (isSignup && password !== confirmPassword) next.confirmPassword = "Passwords do not match.";
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  }
 
   async function submitEmail(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setNotice(null);
+    if (!validateEmailForm()) return;
+
     setBusy(true);
-    setStatus("");
-
-    const form = new FormData(event.currentTarget);
-    const name = String(form.get("name") || "").trim();
-    const email = String(form.get("email") || "").trim();
-    const password = String(form.get("password") || "");
-    const supabase = getSupabaseBrowserClient();
-
-    try {
-      if (!supabase) {
-        login({ name: name || email.split("@")[0], email });
-        setStatus("Secure auth is not configured on this deployment yet, so Zomax used the migration session instead.");
-        router.push("/account");
-        return;
-      }
-
-      if (isSignup) {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { full_name: name } },
-        });
-        if (error) throw error;
-
-        if (data.session) {
-          login({ name, email });
-          router.push("/account");
-        } else {
-          setStatus("Account created. Check your email to confirm your address, then sign in.");
-        }
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        login({ name: String(data.user.user_metadata?.full_name || email.split("@")[0]), email });
-        router.push("/account");
-      }
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Unable to continue. Please try again.");
-    } finally {
-      setBusy(false);
-    }
+    const result = isSignup
+      ? await signUpWithEmail({ name: name.trim(), email: email.trim(), password })
+      : await signInWithEmail({ email: email.trim(), password });
+    complete(result);
+    setBusy(false);
   }
 
-  async function social(provider: Provider) {
+  async function social(provider: AuthProvider) {
     setBusy(true);
-    setStatus("");
-    const supabase = getSupabaseBrowserClient();
-
-    if (!supabase) {
-      setStatus(`${provider === "google" ? "Google" : "Apple"} sign-in is ready in the UI, but the Supabase environment keys and provider credentials still need to be connected.`);
-      setBusy(false);
-      return;
-    }
-
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: `${window.location.origin}/account` },
-    });
-
-    if (error) {
-      setStatus(error.message);
-      setBusy(false);
-    }
+    setNotice(null);
+    const result = await startSocialAuth(provider);
+    complete(result);
+    setBusy(false);
   }
 
-  async function sendOtp() {
+  async function requestOtp() {
+    const normalized = normalizeNigerianPhone(phone);
+    if (!/^\+234\d{10}$/.test(normalized)) {
+      setErrors({ phone: "Enter a valid Nigerian mobile number, e.g. 0801 234 5678." });
+      return;
+    }
+
+    setErrors({});
+    setNotice(null);
     setBusy(true);
-    setStatus("");
-    const supabase = getSupabaseBrowserClient();
-    const normalized = phone.replace(/\s+/g, "");
-
-    if (!/^\+\d{10,15}$/.test(normalized)) {
-      setStatus("Enter a full phone number with country code, for example +2348012345678.");
-      setBusy(false);
-      return;
-    }
-
-    if (!supabase) {
-      setStatus("Phone OTP needs the secure auth backend to be connected before SMS codes can be sent.");
-      setBusy(false);
-      return;
-    }
-
-    const { error } = await supabase.auth.signInWithOtp({ phone: normalized });
-    if (error) setStatus(error.message);
-    else {
+    const result = await sendPhoneOtp(normalized);
+    if (result.ok) {
       setOtpSent(true);
-      setStatus("Code sent. Enter the 6-digit SMS code below.");
+      if (result.previewCode) setPreviewCode(result.previewCode);
+      setNotice({ tone: "success", text: result.message || "Code sent." });
+    } else {
+      setNotice({ tone: "error", text: result.message });
     }
     setBusy(false);
   }
 
-  async function verifyOtp() {
-    setBusy(true);
-    setStatus("");
-    const supabase = getSupabaseBrowserClient();
-    const normalized = phone.replace(/\s+/g, "");
-
-    if (!supabase) {
-      setStatus("Phone OTP backend is not configured on this deployment.");
-      setBusy(false);
+  async function confirmOtp() {
+    if (!/^\d{6}$/.test(otp)) {
+      setErrors({ otp: "Enter the 6-digit code." });
       return;
     }
 
-    const { data, error } = await supabase.auth.verifyOtp({ phone: normalized, token: otp.trim(), type: "sms" });
-    if (error) setStatus(error.message);
-    else if (data.user) {
-      login({ name: data.user.phone || "Zomax user" });
-      router.push("/account");
-    }
+    setErrors({});
+    setNotice(null);
+    setBusy(true);
+    const result = await verifyPhoneOtp({ phone: normalizeNigerianPhone(phone), token: otp, previewCode });
+    complete(result);
     setBusy(false);
   }
 
   return (
-    <main id="main-content" className="mx-auto grid min-h-[calc(100vh-120px)] max-w-6xl items-center gap-6 px-3 py-8 sm:px-5 md:grid-cols-[0.9fr_1.1fr] md:px-6 md:py-12">
-      <section className="order-2 rounded-[32px] bg-[#fff1e7] p-6 ring-1 ring-orange-100 sm:p-8 md:order-1 md:min-h-[590px] md:p-10">
-        <Link href="/" className="inline-flex items-center gap-2 text-xl font-black tracking-[-0.04em] text-[#2b211c]">
-          <span className="grid h-9 w-9 place-items-center rounded-2xl bg-orange-500 text-sm text-white">Z</span>
-          zomax<span className="text-orange-500">.</span>
-        </Link>
-        <p className="mt-12 text-xs font-black uppercase tracking-[0.24em] text-orange-700">One account, whole marketplace</p>
-        <h1 className="mt-4 max-w-md text-4xl font-black leading-[1.03] tracking-[-0.045em] text-[#2b211c] sm:text-5xl">
-          {isSignup ? "Build your Zomax identity." : "Good to have you back."}
-        </h1>
-        <p className="mt-5 max-w-lg text-sm leading-7 text-[#66574d] sm:text-base">
-          Shop, save products, track orders and manage your seller profile from the same account. Use email, Google, Apple or a Nigerian phone number with OTP.
-        </p>
-        <div className="mt-10 grid gap-3 sm:grid-cols-3 md:grid-cols-1 lg:grid-cols-3">
-          {["Orders stay together", "Saved items follow you", "Seller tools stay linked"].map((item) => (
-            <div key={item} className="rounded-2xl bg-white/70 p-4 text-xs font-black text-[#594b42] ring-1 ring-white">{item}</div>
-          ))}
-        </div>
-      </section>
-
-      <section className="order-1 rounded-[32px] bg-white p-5 shadow-[0_24px_70px_rgba(88,66,51,0.10)] ring-1 ring-[#eadfd7] sm:p-8 md:order-2 md:p-10">
-        <div className="mx-auto max-w-lg">
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-600">{isSignup ? "Create account" : "Sign in"}</p>
-          <h2 className="mt-2 text-3xl font-black tracking-[-0.035em] text-[#2b211c] sm:text-4xl">{isSignup ? "Start with Zomax" : "Continue to Zomax"}</h2>
-          <p className="mt-2 text-sm text-slate-500">Choose the method that is easiest for you.</p>
-
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <button disabled={busy} onClick={() => social("google")} className="flex min-h-12 items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-800 transition hover:border-orange-200 hover:bg-orange-50 disabled:opacity-60">
-              <GoogleMark /> Continue with Google
-            </button>
-            <button disabled={busy} onClick={() => social("apple")} className="flex min-h-12 items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-800 transition hover:border-orange-200 hover:bg-orange-50 disabled:opacity-60">
-              <AppleMark /> Continue with Apple
-            </button>
+    <main id="main-content" className="mx-auto flex min-h-[calc(100svh-76px)] max-w-[1080px] items-center px-3 py-6 sm:px-5 sm:py-8 lg:px-6 lg:py-10">
+      <div className="grid w-full overflow-hidden rounded-[30px] border border-[#eadfd7] bg-white shadow-[0_28px_90px_rgba(88,66,51,0.10)] lg:grid-cols-[360px_minmax(0,1fr)]">
+        <aside className="relative hidden overflow-hidden bg-[#fff1e7] p-8 lg:flex lg:min-h-[650px] lg:flex-col lg:justify-between">
+          <div>
+            <Link href="/" className="inline-flex items-center gap-2 text-xl font-black tracking-[-0.04em] text-[#2b211c]">
+              <span className="grid h-9 w-9 place-items-center rounded-2xl bg-orange-500 text-sm text-white">Z</span>
+              zomax<span className="text-orange-500">.</span>
+            </Link>
+            <p className="mt-16 text-xs font-black uppercase tracking-[0.24em] text-orange-700">One account, whole marketplace</p>
+            <h1 className="mt-4 text-[42px] font-black leading-[1.02] tracking-[-0.05em] text-[#2b211c]">
+              {isSignup ? "Your market, one identity." : "Pick up where you left off."}
+            </h1>
+            <p className="mt-5 text-sm leading-7 text-[#6e5d52]">Save products, follow orders, manage your store and move between buyer and seller tools without creating separate accounts.</p>
           </div>
 
-          <div className="my-6 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-400"><span className="h-px flex-1 bg-slate-200" />or email<span className="h-px flex-1 bg-slate-200" /></div>
-
-          <form onSubmit={submitEmail} className="space-y-4">
-            {isSignup ? <label className="block text-sm font-bold text-slate-700">Full name<input required name="name" autoComplete="name" className="mt-2 w-full rounded-2xl border border-slate-200 bg-[#fffdfb] px-4 py-3.5 outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100" /></label> : null}
-            <label className="block text-sm font-bold text-slate-700">Email address<input required type="email" name="email" autoComplete="email" inputMode="email" className="mt-2 w-full rounded-2xl border border-slate-200 bg-[#fffdfb] px-4 py-3.5 outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100" /></label>
-            <label className="block text-sm font-bold text-slate-700">Password<input required minLength={8} type="password" name="password" autoComplete={isSignup ? "new-password" : "current-password"} className="mt-2 w-full rounded-2xl border border-slate-200 bg-[#fffdfb] px-4 py-3.5 outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100" /></label>
-            <button disabled={busy} className="min-h-12 w-full rounded-2xl bg-orange-500 px-5 py-3 font-black text-white shadow-sm transition hover:bg-orange-600 disabled:opacity-60">{busy ? "Working…" : isSignup ? "Create account" : "Sign in"}</button>
-          </form>
-
-          <div className="my-6 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-400"><span className="h-px flex-1 bg-slate-200" />or phone OTP<span className="h-px flex-1 bg-slate-200" /></div>
-
-          <div className="rounded-3xl bg-[#faf7f4] p-4 ring-1 ring-[#eee4dd]">
-            <label className="block text-sm font-bold text-slate-700">Phone number
-              <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                <input value={phone} onChange={(event) => setPhone(event.target.value)} inputMode="tel" autoComplete="tel" aria-label="Phone number" className="min-h-12 min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100" />
-                <button type="button" disabled={busy} onClick={sendOtp} className="min-h-12 rounded-2xl border border-orange-200 bg-orange-50 px-5 text-sm font-black text-orange-700 hover:bg-orange-100 disabled:opacity-60">Send code</button>
+          <div className="space-y-3">
+            {["Your saved items stay with you", "Orders and seller tools stay linked", "Phone, email and social sign-in ready"].map((item) => (
+              <div key={item} className="flex items-center gap-3 rounded-2xl bg-white/75 p-3.5 text-xs font-black text-[#594b42] ring-1 ring-white">
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-xl bg-orange-100 text-orange-700">✓</span>
+                {item}
               </div>
-            </label>
-            {otpSent ? <div className="mt-3 flex flex-col gap-2 sm:flex-row"><input value={otp} onChange={(event) => setOtp(event.target.value)} inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="6-digit code" aria-label="SMS verification code" className="min-h-12 min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 tracking-[0.3em] outline-none focus:border-orange-400" /><button type="button" disabled={busy} onClick={verifyOtp} className="min-h-12 rounded-2xl bg-[#2b211c] px-5 text-sm font-black text-white hover:bg-orange-600 disabled:opacity-60">Verify</button></div> : null}
+            ))}
           </div>
+        </aside>
 
-          {status ? <p role="status" className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-bold leading-5 text-amber-900 ring-1 ring-amber-200">{status}</p> : null}
+        <section className="min-w-0 p-5 sm:p-8 lg:p-10 xl:p-12">
+          <div className="mx-auto max-w-[520px]">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-600">{isSignup ? "Create account" : "Welcome back"}</p>
+                  {!secureAuth ? <span className="rounded-full bg-[#f6f1ed] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-[#8a776a]">Frontend preview</span> : null}
+                </div>
+                <h2 className="mt-2 text-3xl font-black tracking-[-0.04em] text-[#2b211c] sm:text-4xl">{isSignup ? "Join Zomax" : "Sign in to Zomax"}</h2>
+                <p className="mt-2 text-sm leading-6 text-[#7b6a60]">Use the account method you already trust.</p>
+              </div>
+            </div>
 
-          <p className="mt-6 text-center text-sm text-slate-600">
-            {isSignup ? "Already have an account?" : "New to Zomax?"} <Link href={isSignup ? "/login" : "/signup"} className="font-black text-orange-600 hover:text-orange-700">{isSignup ? "Sign in" : "Create one"}</Link>
-          </p>
-          <p className="mt-4 text-center text-[11px] leading-5 text-slate-400">By continuing, you agree to Zomax account and marketplace policies. Google, Apple and SMS require provider configuration in the secure auth backend.</p>
-        </div>
-      </section>
+            {currentUser ? (
+              <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Already signed in</p>
+                  <p className="mt-1 truncate text-sm font-bold text-emerald-950">{currentUser.email || currentUser.phone || currentUser.name}</p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <button type="button" onClick={() => router.push("/account")} className="rounded-xl bg-emerald-700 px-3 py-2 text-xs font-black text-white">Continue</button>
+                  <button type="button" onClick={logout} className="rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-black text-emerald-800">Use another</button>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button type="button" disabled={busy} onClick={() => social("google")} className="flex min-h-12 items-center justify-center gap-2.5 rounded-2xl border border-[#e6ddd7] bg-white px-3 text-sm font-black text-[#3e332d] transition hover:border-orange-200 hover:bg-orange-50 disabled:opacity-60">
+                <GoogleMark /><span className="truncate">Google</span>
+              </button>
+              <button type="button" disabled={busy} onClick={() => social("apple")} className="flex min-h-12 items-center justify-center gap-2.5 rounded-2xl border border-[#e6ddd7] bg-white px-3 text-sm font-black text-[#3e332d] transition hover:border-orange-200 hover:bg-orange-50 disabled:opacity-60">
+                <AppleMark /><span className="truncate">Apple</span>
+              </button>
+            </div>
+
+            <div className="my-6 flex items-center gap-3"><span className="h-px flex-1 bg-[#eee5df]" /><span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#a18e81]">or continue with</span><span className="h-px flex-1 bg-[#eee5df]" /></div>
+
+            <div className="grid grid-cols-2 rounded-2xl bg-[#f7f2ee] p-1.5">
+              <button type="button" onClick={() => { setMethod("email"); setErrors({}); setNotice(null); }} className={`min-h-10 rounded-xl text-sm font-black transition ${method === "email" ? "bg-white text-[#2b211c] shadow-sm" : "text-[#8c786b] hover:text-[#2b211c]"}`}>Email</button>
+              <button type="button" onClick={() => { setMethod("phone"); setErrors({}); setNotice(null); }} className={`min-h-10 rounded-xl text-sm font-black transition ${method === "phone" ? "bg-white text-[#2b211c] shadow-sm" : "text-[#8c786b] hover:text-[#2b211c]"}`}>Phone OTP</button>
+            </div>
+
+            {method === "email" ? (
+              <form noValidate onSubmit={submitEmail} className="mt-5 space-y-4">
+                {isSignup ? (
+                  <label className="block text-sm font-bold text-[#4a3d35]">Full name
+                    <input value={name} onChange={(event) => { setName(event.target.value); setErrors((value) => ({ ...value, name: undefined })); }} name="name" autoComplete="name" placeholder="Your full name" aria-invalid={Boolean(errors.name)} className={fieldClass(Boolean(errors.name))} />
+                    {errors.name ? <span className="mt-1.5 block text-xs font-bold text-rose-600">{errors.name}</span> : null}
+                  </label>
+                ) : null}
+
+                <label className="block text-sm font-bold text-[#4a3d35]">Email address
+                  <input value={email} onChange={(event) => { setEmail(event.target.value); setErrors((value) => ({ ...value, email: undefined })); }} type="email" name="email" autoComplete="email" inputMode="email" placeholder="name@example.com" aria-invalid={Boolean(errors.email)} className={fieldClass(Boolean(errors.email))} />
+                  {errors.email ? <span className="mt-1.5 block text-xs font-bold text-rose-600">{errors.email}</span> : null}
+                </label>
+
+                <label className="block text-sm font-bold text-[#4a3d35]">Password
+                  <div className="relative">
+                    <input value={password} onChange={(event) => { setPassword(event.target.value); setErrors((value) => ({ ...value, password: undefined })); }} type={showPassword ? "text" : "password"} name="password" autoComplete={isSignup ? "new-password" : "current-password"} placeholder={isSignup ? "At least 8 characters" : "Your password"} aria-invalid={Boolean(errors.password)} className={`${fieldClass(Boolean(errors.password))} pr-20`} />
+                    <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute bottom-2 right-2 rounded-xl px-3 py-2 text-xs font-black text-[#806c60] hover:bg-[#f6f1ed]">{showPassword ? "Hide" : "Show"}</button>
+                  </div>
+                  {errors.password ? <span className="mt-1.5 block text-xs font-bold text-rose-600">{errors.password}</span> : null}
+                  {isSignup && password ? (
+                    <div className="mt-2 flex items-center gap-2">
+                      <div className="flex flex-1 gap-1">{[1, 2, 3, 4].map((step) => <span key={step} className={`h-1.5 flex-1 rounded-full ${passwordScore >= step ? "bg-orange-500" : "bg-[#eadfd7]"}`} />)}</div>
+                      <span className="text-[10px] font-black uppercase text-[#8c786b]">{passwordScore <= 1 ? "Weak" : passwordScore <= 3 ? "Good" : "Strong"}</span>
+                    </div>
+                  ) : null}
+                </label>
+
+                {isSignup ? (
+                  <label className="block text-sm font-bold text-[#4a3d35]">Confirm password
+                    <input value={confirmPassword} onChange={(event) => { setConfirmPassword(event.target.value); setErrors((value) => ({ ...value, confirmPassword: undefined })); }} type={showPassword ? "text" : "password"} autoComplete="new-password" placeholder="Repeat password" aria-invalid={Boolean(errors.confirmPassword)} className={fieldClass(Boolean(errors.confirmPassword))} />
+                    {errors.confirmPassword ? <span className="mt-1.5 block text-xs font-bold text-rose-600">{errors.confirmPassword}</span> : null}
+                  </label>
+                ) : (
+                  <div className="flex justify-end"><Link href="/forgot-password" className="text-xs font-black text-orange-600 hover:text-orange-700">Forgot password?</Link></div>
+                )}
+
+                <button disabled={busy} className="min-h-12 w-full rounded-2xl bg-orange-500 px-5 py-3 font-black text-white shadow-[0_10px_24px_rgba(249,115,22,0.20)] transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60">{busy ? "Please wait…" : isSignup ? "Create account" : "Sign in"}</button>
+              </form>
+            ) : (
+              <div className="mt-5">
+                <label className="block text-sm font-bold text-[#4a3d35]">Mobile number
+                  <div className="mt-2 flex rounded-2xl border border-[#e6ddd7] bg-white focus-within:border-orange-400 focus-within:ring-4 focus-within:ring-orange-100">
+                    <span className="flex min-h-12 items-center border-r border-[#eee5df] px-4 text-sm font-black text-[#5f4f45]">🇳🇬 +234</span>
+                    <input value={phone} onChange={(event) => { setPhone(event.target.value); setErrors((value) => ({ ...value, phone: undefined })); }} inputMode="tel" autoComplete="tel-national" placeholder="801 234 5678" aria-label="Nigerian mobile number" className="min-h-12 min-w-0 flex-1 rounded-r-2xl bg-transparent px-4 text-[16px] outline-none" />
+                  </div>
+                  {errors.phone ? <span className="mt-1.5 block text-xs font-bold text-rose-600">{errors.phone}</span> : <span className="mt-1.5 block text-xs text-[#9b887c]">You can also enter a number starting with 0.</span>}
+                </label>
+
+                {!otpSent ? (
+                  <button type="button" disabled={busy} onClick={requestOtp} className="mt-4 min-h-12 w-full rounded-2xl bg-orange-500 px-5 py-3 font-black text-white hover:bg-orange-600 disabled:opacity-60">{busy ? "Sending…" : "Send 6-digit code"}</button>
+                ) : (
+                  <div className="mt-4 rounded-2xl bg-[#faf7f4] p-4 ring-1 ring-[#eee4dd]">
+                    <div className="flex items-center justify-between gap-3">
+                      <div><p className="text-sm font-black text-[#3d312a]">Enter verification code</p><p className="mt-1 text-xs text-[#8c786b]">Sent to {normalizeNigerianPhone(phone)}</p></div>
+                      <button type="button" disabled={busy} onClick={requestOtp} className="text-xs font-black text-orange-600">Resend</button>
+                    </div>
+                    <input value={otp} onChange={(event) => { setOtp(event.target.value.replace(/\D/g, "").slice(0, 6)); setErrors((value) => ({ ...value, otp: undefined })); }} inputMode="numeric" autoComplete="one-time-code" placeholder="000000" aria-label="SMS verification code" className={`${fieldClass(Boolean(errors.otp))} text-center text-xl font-black tracking-[0.35em]`} />
+                    {errors.otp ? <span className="mt-1.5 block text-xs font-bold text-rose-600">{errors.otp}</span> : null}
+                    <button type="button" disabled={busy} onClick={confirmOtp} className="mt-3 min-h-12 w-full rounded-2xl bg-[#3b2d25] px-5 py-3 font-black text-white hover:bg-orange-600 disabled:opacity-60">{busy ? "Checking…" : "Verify and continue"}</button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {notice ? <p role={notice.tone === "error" ? "alert" : "status"} className={`mt-4 rounded-2xl border px-4 py-3 text-xs font-bold leading-5 ${noticeClass(notice.tone)}`}>{notice.text}</p> : null}
+
+            <p className="mt-6 text-center text-sm text-[#75645a]">{isSignup ? "Already have an account?" : "New to Zomax?"} <Link href={isSignup ? "/login" : "/signup"} className="font-black text-orange-600 hover:text-orange-700">{isSignup ? "Sign in" : "Create account"}</Link></p>
+            <p className="mt-4 text-center text-[11px] leading-5 text-[#a18e81]">By continuing, you agree to Zomax account terms and privacy policy. Preview mode simulates the frontend flow only and never stores your password.</p>
+          </div>
+        </section>
+      </div>
     </main>
   );
 }
