@@ -36,7 +36,10 @@ body {
 }
 
 img, svg, video, canvas { max-width: 100%; }
-a { color: inherit; text-decoration: none; }
+
+/* Do not set link color globally. Tailwind 4 utilities live in a cascade layer;
+   an unlayered `a { color: inherit }` can override classes such as text-white. */
+a { text-decoration: none; }
 button, input, select, textarea { font: inherit; max-width: 100%; }
 button, a { -webkit-tap-highlight-color: transparent; }
 
@@ -55,34 +58,16 @@ button, a { -webkit-tap-highlight-color: transparent; }
   outline-offset: 3px;
 }
 
-/*
- * Readability layer
- * The visual system still uses Zomax orange, but small copy must not compete
- * with the surfaces behind it. These overrides intentionally strengthen the
- * low-contrast utility colors used throughout the migrated frontend.
- */
-.text-slate-400 { color: #75655b !important; }
-.text-slate-500 { color: #66574d !important; }
-.text-slate-600 { color: #594b42 !important; }
-.text-orange-500,
-.text-orange-600 { color: #b45309 !important; }
+/* Semantic text helpers. Use these when a component needs stronger copy instead
+   of globally rewriting Tailwind color utilities. */
+.z-text-primary { color: var(--ink); }
+.z-text-secondary { color: var(--text-secondary); }
+.z-text-muted { color: var(--text-muted); }
+.z-text-soft { color: var(--text-soft); }
+.z-text-brand { color: var(--brand-dark); }
 
-[class~="text-[#a18e81]"],
-[class~="text-[#9a887c]"],
-[class~="text-[#aa9a8f]"],
-[class~="text-[#8c786b]"],
-[class~="text-[#8a776a]"] {
-  color: #65554b !important;
-}
-
-[class~="placeholder:text-[#aa9a8f]"]::placeholder,
-[class~="placeholder:text-slate-400"]::placeholder {
-  color: #78675d !important;
-  opacity: 1;
-}
-
-/* Bright orange remains a brand accent; text buttons use a deeper orange so
-   white labels keep strong contrast at normal font sizes. */
+/* Bright orange stays available for decoration. Interactive controls carrying
+   white text use a deeper action orange for reliable contrast. */
 .bg-orange-500.text-white,
 .bg-orange-600.text-white,
 button.bg-orange-500,
@@ -99,16 +84,6 @@ a.bg-orange-500:hover,
 button.bg-orange-600:hover,
 a.bg-orange-600:hover {
   background-color: #a83a08 !important;
-}
-
-/* Preserve readable light copy inside the few intentionally dark surfaces. */
-.bg-slate-950 .text-slate-400,
-.bg-slate-950 .text-slate-500,
-.bg-slate-900 .text-slate-400,
-.bg-slate-900 .text-slate-500,
-[class*="bg-[#2b211c]"] .text-slate-400,
-[class*="bg-[#2b211c]"] .text-slate-500 {
-  color: #d6d3d1 !important;
 }
 
 [aria-disabled="true"],
