@@ -2,9 +2,7 @@
 
 ## Current state
 
-The production branch now runs Next.js App Router with React, TypeScript and Tailwind. The original vanilla application remains in the repository only as a parity/reference copy; it is no longer the primary app.
-
-The legacy source is still concentrated in `index.html` (~53 KB) and `main.js` (~114 KB), with route-like HTML redirect files and old JSON fixtures. These should be archived or removed after the final parity audit.
+The active application is Next.js App Router with React, TypeScript and Tailwind. The original vanilla HTML/CSS/JavaScript runtime has been removed from the active tree after parity/hardening work; it remains recoverable through Git history. Old `.html` URLs are preserved with permanent redirects in `next.config.ts`.
 
 ## Migrated and hardened
 
@@ -15,9 +13,11 @@ The legacy source is still concentrated in `index.html` (~53 KB) and `main.js` (
 - `next/image` optimization and lazy loading for server catalog images
 - Route loading UI, route/global recovery and section-level client error boundaries
 - Resilient catalog adapter with timeout, payload validation and seed fallback
-- PWA manifest, service worker registration, offline page and offline state notice
+- PWA manifest, versioned service worker, offline page, offline state notice and update prompt
 - Service worker excludes `/api/*` and private mutation traffic
-- Browser security headers
+- Browser security headers plus noindex headers for private/account/seller routes
+- Sitemap, robots policy, canonical site URL helper and richer social metadata
+- Product canonical metadata and Product/Offer JSON-LD
 - Supabase-ready email/password, phone OTP, Google and Apple auth adapter
 - Explicit frontend-preview auth mode while the backend is not connected
 - Versioned per-user/guest browser storage namespaces
@@ -27,6 +27,8 @@ The legacy source is still concentrated in `index.html` (~53 KB) and `main.js` (
 - Seller routes/listing creation require a signed-in frontend identity
 - Orders snapshot product details at checkout instead of depending only on future catalog lookups
 - CI typecheck + regression tests + production build on PRs and pushes to `main`
+- Semantic Zomax color/UI tokens that avoid global text-color overrides
+- Legacy HTML/JS/assets/JSON fixtures removed from the active repository tree
 
 ## Still required before handling real money/users
 
@@ -38,9 +40,8 @@ The legacy source is still concentrated in `index.html` (~53 KB) and `main.js` (
 - Real order lifecycle/status events and seller fulfilment workflow
 - Address book/payment-method persistence if those account flows remain required
 - Dependency lockfile and broader automated browser tests
-- SEO/discovery pass (`sitemap`, `robots`, structured data and richer social metadata)
-- PWA cache-version/update UX hardening and production PNG icon set
-- Final removal/archive of the legacy HTML/JS application
+- Production PNG PWA icon set and final device-level install testing
+- Larger component/design-system refactor, especially the auth screen and seller forms
 
 ## Failure-isolation model
 
