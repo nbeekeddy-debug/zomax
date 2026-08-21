@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 export function RouteAnnouncer() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -14,7 +13,7 @@ export function RouteAnnouncer() {
       setMessage(title ? `${title} loaded` : "Page loaded");
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [pathname, searchParams]);
+  }, [pathname]);
 
   return (
     <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
