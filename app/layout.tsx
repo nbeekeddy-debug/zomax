@@ -5,6 +5,7 @@ import { PwaRuntime } from "@/components/pwa-runtime";
 import { SiteHeader } from "@/components/site-header";
 import { MobileDock } from "@/components/mobile-dock";
 import { AuthSessionBridge } from "@/components/auth-session-bridge";
+import { RouteAnnouncer } from "@/components/route-announcer";
 import { siteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -57,6 +58,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <MarketplaceProvider>
           <PwaRuntime />
           <AuthSessionBridge />
+          <RouteAnnouncer />
           <SiteHeader />
           <div id="zomax-page-content" tabIndex={-1} className="outline-none">
             {children}

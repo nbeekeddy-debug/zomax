@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useMarketplace } from "@/components/marketplace-provider";
+import { Button } from "@/components/ui/button";
 
 export function ProductActions({ productId }: { productId: number }) {
   const { addToCart, toggleWishlist, wishlist } = useMarketplace();
@@ -17,13 +18,12 @@ export function ProductActions({ productId }: { productId: number }) {
   return (
     <>
       <div className="flex w-full items-center gap-2">
-        <button
-          type="button"
+        <Button
           onClick={() => { addToCart(productId); setMessage("Added to your cart"); }}
-          className="min-h-11 flex-1 rounded-2xl bg-orange-500 px-4 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+          className="flex-1"
         >
           Add to cart
-        </button>
+        </Button>
         <button
           type="button"
           onClick={() => { toggleWishlist(productId); setMessage(saved ? "Removed from saved items" : "Saved for later"); }}
@@ -36,7 +36,7 @@ export function ProductActions({ productId }: { productId: number }) {
       </div>
 
       {message ? (
-        <div aria-live="polite" className="fixed bottom-24 right-3 z-[100] max-w-[calc(100vw-24px)] rounded-2xl bg-[#2b211c] px-4 py-3 text-sm font-black text-white shadow-2xl sm:bottom-6 sm:right-6">
+        <div aria-live="polite" role="status" className="fixed bottom-24 right-3 z-[100] max-w-[calc(100vw-24px)] rounded-2xl bg-[#2b211c] px-4 py-3 text-sm font-black text-white shadow-2xl sm:bottom-6 sm:right-6">
           {message}
         </div>
       ) : null}
