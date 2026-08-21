@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { serviceRequest } from "@/lib/services/http-client";
+import { serviceRequest } from "../lib/services/http-client";
 
 const originalFetch = globalThis.fetch;
 
