@@ -1,5 +1,5 @@
-import type { Account, CartItem, Order, SellerListing } from "@/lib/marketplace-types";
-import { scopedStorageKey, type PrivateStoreKey } from "@/lib/marketplace-storage";
+import type { Account, CartItem, Order, SellerListing } from "../marketplace-types";
+import { scopedStorageKey, type PrivateStoreKey } from "../marketplace-storage";
 
 export type PrivateSnapshot = {
   cart: CartItem[];
