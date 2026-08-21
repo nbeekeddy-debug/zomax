@@ -5,9 +5,11 @@ Zomax is a Next.js marketplace frontend migrated from the original vanilla HTML/
 ## Development
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
+
+Use `npm install` only when intentionally changing dependencies, and commit the resulting `package-lock.json` update with that dependency change.
 
 Validation:
 
