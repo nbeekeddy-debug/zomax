@@ -8,6 +8,8 @@ export async function GET() {
       ok: true,
       service: "zomax-web",
       runtime: "nextjs",
+      environment: process.env.VERCEL_ENV || process.env.NODE_ENV || "unknown",
+      revision: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) || "local",
       timestamp: new Date().toISOString(),
     },
     {
