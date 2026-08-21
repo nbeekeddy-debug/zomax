@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useState } from "react";
 import {
   isSecureAuthConfigured,
   sendPhoneOtp,
@@ -13,12 +13,19 @@ import {
   type AuthProvider,
   type AuthResult,
 } from "@/lib/auth-flow";
+import {
+  normalizeNigerianPhone,
+  passwordStrengthScore,
+  validateEmailCredentials,
+  validateOtp,
+  validatePhoneInput,
+  type AuthFieldErrors,
+} from "@/lib/auth-validation";
 import { useMarketplace } from "@/components/marketplace-provider";
 
 type Mode = "login" | "signup";
 type Method = "email" | "phone";
 type Notice = { tone: "error" | "success" | "info"; text: string } | null;
-type FieldErrors = Partial<Record<"name" | "email" | "password" | "confirmPassword" | "phone" | "otp", string>>;
 
 function GoogleMark() {
   return <span aria-hidden className="grid h-8 w-8 place-items-center rounded-full bg-white text-sm font-black text-[#4285f4] ring-1 ring-[#e5e7eb]">G</span>;
@@ -26,13 +33,6 @@ function GoogleMark() {
 
 function AppleMark() {
   return <span aria-hidden className="grid h-8 w-8 place-items-center rounded-full bg-[#2b211c] text-sm font-black text-white">●</span>;
-}
-
-function normalizeNigerianPhone(value: string) {
-  const digits = value.replace(/\D/g, "");
-  if (digits.startsWith("234")) return `+${digits}`;
-  if (digits.startsWith("0")) return `+234${digits.slice(1)}`;
-  return `+234${digits}`;
 }
 
 function fieldClass(hasError?: boolean) {
@@ -43,7 +43,7 @@ function fieldClass(hasError?: boolean) {
   }`;
 }
 
-function noticeClass(tone: Notice extends infer _ ? "error" | "success" | "info" : never) {
+function noticeClass(tone: "error" | "success" | "info") {
   if (tone === "error") return "border-rose-200 bg-rose-50 text-rose-800";
   if (tone === "success") return "border-emerald-200 bg-emerald-50 text-emerald-800";
   return "border-orange-200 bg-orange-50 text-orange-800";
@@ -58,7 +58,7 @@ export function AuthScreen({ mode }: { mode: Mode }) {
   const [method, setMethod] = useState<Method>("email");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
-  const [errors, setErrors] = useState<FieldErrors>({});
+  const [errors, setErrors] = useState<AuthFieldErrors>({});
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -69,14 +69,7 @@ export function AuthScreen({ mode }: { mode: Mode }) {
   const [otpSent, setOtpSent] = useState(false);
   const [previewCode, setPreviewCode] = useState<string | undefined>();
 
-  const passwordScore = useMemo(() => {
-    let score = 0;
-    if (password.length >= 8) score += 1;
-    if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score += 1;
-    if (/\d/.test(password)) score += 1;
-    if (/[^A-Za-z0-9]/.test(password)) score += 1;
-    return score;
-  }, [password]);
+  const passwordScore = passwordStrengthScore(password);
 
   function complete(result: AuthResult, successDestination = "/account") {
     if (!result.ok) {
@@ -101,11 +94,13 @@ export function AuthScreen({ mode }: { mode: Mode }) {
   }
 
   function validateEmailForm() {
-    const next: FieldErrors = {};
-    if (isSignup && name.trim().length < 2) next.name = "Enter your full name.";
-    if (!/^\S+@\S+\.\S+$/.test(email.trim())) next.email = "Enter a valid email address.";
-    if (password.length < 8) next.password = "Use at least 8 characters.";
-    if (isSignup && password !== confirmPassword) next.confirmPassword = "Passwords do not match.";
+    const next = validateEmailCredentials({
+      signup: isSignup,
+      name,
+      email,
+      password,
+      confirmPassword,
+    });
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -132,12 +127,13 @@ export function AuthScreen({ mode }: { mode: Mode }) {
   }
 
   async function requestOtp() {
-    const normalized = normalizeNigerianPhone(phone);
-    if (!/^\+234\d{10}$/.test(normalized)) {
-      setErrors({ phone: "Enter a valid Nigerian mobile number, e.g. 0801 234 5678." });
+    const next = validatePhoneInput(phone);
+    if (next.phone) {
+      setErrors(next);
       return;
     }
 
+    const normalized = normalizeNigerianPhone(phone);
     setErrors({});
     setNotice(null);
     setBusy(true);
@@ -153,8 +149,9 @@ export function AuthScreen({ mode }: { mode: Mode }) {
   }
 
   async function confirmOtp() {
-    if (!/^\d{6}$/.test(otp)) {
-      setErrors({ otp: "Enter the 6-digit code." });
+    const next = validateOtp(otp);
+    if (next.otp) {
+      setErrors(next);
       return;
     }
 
