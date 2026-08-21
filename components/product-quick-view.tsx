@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { ProductActions } from "@/components/product-actions";
 import { money, type Product } from "@/lib/products";
+import { Icon } from "@/components/ui/icon";
 
 export function ProductQuickView({ product }: { product: Product }) {
   const [open, setOpen] = useState(false);
@@ -34,7 +35,7 @@ export function ProductQuickView({ product }: { product: Product }) {
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#a63d08]">Quick view</p>
             <p className="mt-1 text-sm font-bold text-[#594b42]">See the essentials without leaving the feed.</p>
           </div>
-          <button type="button" onClick={() => setOpen(false)} className="grid h-10 w-10 place-items-center rounded-2xl border border-[#e5d9d1] bg-white text-lg font-black text-[#493a31] hover:bg-[#f7f2ee]" aria-label="Close quick view">×</button>
+          <button type="button" onClick={() => setOpen(false)} className="grid h-10 w-10 place-items-center rounded-2xl border border-[#e5d9d1] bg-white text-[#493a31] hover:bg-[#f7f2ee]" aria-label="Close quick view"><Icon name="x" size={18} /></button>
         </div>
 
         <div className="grid gap-0 md:grid-cols-[0.95fr_1.05fr]">
@@ -67,7 +68,7 @@ export function ProductQuickView({ product }: { product: Product }) {
             </div>
 
             <div className="mt-5"><ProductActions productId={product.id} /></div>
-            <Link href={`/product/${product.id}`} onClick={() => setOpen(false)} className="mt-3 flex min-h-11 items-center justify-center rounded-2xl border border-[#dfd2ca] bg-white px-4 text-sm font-black text-[#493a31] hover:border-orange-300 hover:text-[#a63d08]">Open full product page →</Link>
+            <Link href={`/product/${product.id}`} onClick={() => setOpen(false)} className="mt-3 flex min-h-11 items-center justify-center rounded-2xl border border-[#dfd2ca] bg-white px-4 text-sm font-black text-[#493a31] hover:border-orange-300 hover:text-[#a63d08]">Open full product page <Icon name="arrow-right" size={17} className="ml-2" /></Link>
           </div>
         </div>
       </Dialog>
