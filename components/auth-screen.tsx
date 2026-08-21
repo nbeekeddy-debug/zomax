@@ -22,18 +22,13 @@ import {
   type AuthFieldErrors,
 } from "@/lib/auth-validation";
 import { useMarketplace } from "@/components/marketplace-provider";
+import { AuthAside } from "@/components/auth/auth-aside";
+import { AuthMethodTabs, type AuthMethod } from "@/components/auth/auth-method-tabs";
+import { AuthNotice, type AuthNoticeValue } from "@/components/auth/auth-notice";
+import { CurrentSessionBanner } from "@/components/auth/current-session-banner";
+import { SocialAuthButtons } from "@/components/auth/social-auth-buttons";
 
 type Mode = "login" | "signup";
-type Method = "email" | "phone";
-type Notice = { tone: "error" | "success" | "info"; text: string } | null;
-
-function GoogleMark() {
-  return <span aria-hidden className="grid h-8 w-8 place-items-center rounded-full bg-white text-sm font-black text-[#4285f4] ring-1 ring-[#e5e7eb]">G</span>;
-}
-
-function AppleMark() {
-  return <span aria-hidden className="grid h-8 w-8 place-items-center rounded-full bg-[#2b211c] text-sm font-black text-white">●</span>;
-}
 
 function fieldClass(hasError?: boolean) {
   return `mt-2 min-h-12 w-full rounded-2xl border bg-white px-4 text-[16px] text-[#2b211c] outline-none transition placeholder:text-[#aa9a8f] ${
@@ -43,21 +38,15 @@ function fieldClass(hasError?: boolean) {
   }`;
 }
 
-function noticeClass(tone: "error" | "success" | "info") {
-  if (tone === "error") return "border-rose-200 bg-rose-50 text-rose-800";
-  if (tone === "success") return "border-emerald-200 bg-emerald-50 text-emerald-800";
-  return "border-orange-200 bg-orange-50 text-orange-800";
-}
-
 export function AuthScreen({ mode }: { mode: Mode }) {
   const router = useRouter();
   const { login, logout, currentUser } = useMarketplace();
   const secureAuth = isSecureAuthConfigured();
   const isSignup = mode === "signup";
 
-  const [method, setMethod] = useState<Method>("email");
+  const [method, setMethod] = useState<AuthMethod>("email");
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<Notice>(null);
+  const [notice, setNotice] = useState<AuthNoticeValue>(null);
   const [errors, setErrors] = useState<AuthFieldErrors>({});
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -163,31 +152,16 @@ export function AuthScreen({ mode }: { mode: Mode }) {
     setBusy(false);
   }
 
+  function changeMethod(nextMethod: AuthMethod) {
+    setMethod(nextMethod);
+    setErrors({});
+    setNotice(null);
+  }
+
   return (
     <main id="main-content" className="mx-auto flex min-h-[calc(100svh-76px)] max-w-[1080px] items-center px-3 py-6 sm:px-5 sm:py-8 lg:px-6 lg:py-10">
       <div className="grid w-full overflow-hidden rounded-[30px] border border-[#eadfd7] bg-white shadow-[0_28px_90px_rgba(88,66,51,0.10)] lg:grid-cols-[360px_minmax(0,1fr)]">
-        <aside className="relative hidden overflow-hidden bg-[#fff1e7] p-8 lg:flex lg:min-h-[650px] lg:flex-col lg:justify-between">
-          <div>
-            <Link href="/" className="inline-flex items-center gap-2 text-xl font-black tracking-[-0.04em] text-[#2b211c]">
-              <span className="grid h-9 w-9 place-items-center rounded-2xl bg-orange-500 text-sm text-white">Z</span>
-              zomax<span className="text-orange-500">.</span>
-            </Link>
-            <p className="mt-16 text-xs font-black uppercase tracking-[0.24em] text-orange-700">One account, whole marketplace</p>
-            <h1 className="mt-4 text-[42px] font-black leading-[1.02] tracking-[-0.05em] text-[#2b211c]">
-              {isSignup ? "Your market, one identity." : "Pick up where you left off."}
-            </h1>
-            <p className="mt-5 text-sm leading-7 text-[#6e5d52]">Save products, follow orders, manage your store and move between buyer and seller tools without creating separate accounts.</p>
-          </div>
-
-          <div className="space-y-3">
-            {["Your saved items stay with you", "Orders and seller tools stay linked", "Phone, email and social sign-in ready"].map((item) => (
-              <div key={item} className="flex items-center gap-3 rounded-2xl bg-white/75 p-3.5 text-xs font-black text-[#594b42] ring-1 ring-white">
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-xl bg-orange-100 text-orange-700">✓</span>
-                {item}
-              </div>
-            ))}
-          </div>
-        </aside>
+        <AuthAside isSignup={isSignup} />
 
         <section className="min-w-0 p-5 sm:p-8 lg:p-10 xl:p-12">
           <div className="mx-auto max-w-[520px]">
@@ -203,33 +177,22 @@ export function AuthScreen({ mode }: { mode: Mode }) {
             </div>
 
             {currentUser ? (
-              <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Already signed in</p>
-                  <p className="mt-1 truncate text-sm font-bold text-emerald-950">{currentUser.email || currentUser.phone || currentUser.name}</p>
-                </div>
-                <div className="flex shrink-0 gap-2">
-                  <button type="button" onClick={() => router.push("/account")} className="rounded-xl bg-emerald-700 px-3 py-2 text-xs font-black text-white">Continue</button>
-                  <button type="button" onClick={logout} className="rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-black text-emerald-800">Use another</button>
-                </div>
-              </div>
+              <CurrentSessionBanner
+                user={currentUser}
+                onContinue={() => router.push("/account")}
+                onUseAnother={logout}
+              />
             ) : null}
 
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <button type="button" disabled={busy} onClick={() => social("google")} className="flex min-h-12 items-center justify-center gap-2.5 rounded-2xl border border-[#e6ddd7] bg-white px-3 text-sm font-black text-[#3e332d] transition hover:border-orange-200 hover:bg-orange-50 disabled:opacity-60">
-                <GoogleMark /><span className="truncate">Google</span>
-              </button>
-              <button type="button" disabled={busy} onClick={() => social("apple")} className="flex min-h-12 items-center justify-center gap-2.5 rounded-2xl border border-[#e6ddd7] bg-white px-3 text-sm font-black text-[#3e332d] transition hover:border-orange-200 hover:bg-orange-50 disabled:opacity-60">
-                <AppleMark /><span className="truncate">Apple</span>
-              </button>
+            <SocialAuthButtons busy={busy} onSelect={social} />
+
+            <div className="my-6 flex items-center gap-3">
+              <span className="h-px flex-1 bg-[#eee5df]" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#a18e81]">or continue with</span>
+              <span className="h-px flex-1 bg-[#eee5df]" />
             </div>
 
-            <div className="my-6 flex items-center gap-3"><span className="h-px flex-1 bg-[#eee5df]" /><span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#a18e81]">or continue with</span><span className="h-px flex-1 bg-[#eee5df]" /></div>
-
-            <div className="grid grid-cols-2 rounded-2xl bg-[#f7f2ee] p-1.5">
-              <button type="button" onClick={() => { setMethod("email"); setErrors({}); setNotice(null); }} className={`min-h-10 rounded-xl text-sm font-black transition ${method === "email" ? "bg-white text-[#2b211c] shadow-sm" : "text-[#8c786b] hover:text-[#2b211c]"}`}>Email</button>
-              <button type="button" onClick={() => { setMethod("phone"); setErrors({}); setNotice(null); }} className={`min-h-10 rounded-xl text-sm font-black transition ${method === "phone" ? "bg-white text-[#2b211c] shadow-sm" : "text-[#8c786b] hover:text-[#2b211c]"}`}>Phone OTP</button>
-            </div>
+            <AuthMethodTabs method={method} onChange={changeMethod} />
 
             {method === "email" ? (
               <form noValidate onSubmit={submitEmail} className="mt-5 space-y-4">
@@ -296,7 +259,7 @@ export function AuthScreen({ mode }: { mode: Mode }) {
               </div>
             )}
 
-            {notice ? <p role={notice.tone === "error" ? "alert" : "status"} className={`mt-4 rounded-2xl border px-4 py-3 text-xs font-bold leading-5 ${noticeClass(notice.tone)}`}>{notice.text}</p> : null}
+            <AuthNotice notice={notice} />
 
             <p className="mt-6 text-center text-sm text-[#75645a]">{isSignup ? "Already have an account?" : "New to Zomax?"} <Link href={isSignup ? "/login" : "/signup"} className="font-black text-orange-600 hover:text-orange-700">{isSignup ? "Sign in" : "Create account"}</Link></p>
             <p className="mt-4 text-center text-[11px] leading-5 text-[#a18e81]">By continuing, you agree to Zomax account terms and privacy policy. Preview mode simulates the frontend flow only and never stores your password.</p>
