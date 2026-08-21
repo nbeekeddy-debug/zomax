@@ -60,7 +60,7 @@ export async function signInWithEmail(input: { email: string; password: string }
         authSource: "email",
         preview: true,
       },
-      message: "Frontend preview session started. Your password was validated in the browser and was not stored.",
+      message: "Frontend preview session started. The form was validated locally, but these credentials were not verified by a server and your password was not stored.",
     };
   }
 
