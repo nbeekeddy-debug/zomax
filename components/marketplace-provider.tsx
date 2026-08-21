@@ -12,8 +12,14 @@ import {
   sharedReviewsKey,
   storageScope,
   userIdentity,
-  type PrivateStoreKey,
 } from "@/lib/marketplace-storage";
+import {
+  readBrowserValue as readLocal,
+  writeBrowserValue as writeLocal,
+  readPrivateSnapshot,
+  removePrivateSnapshot,
+  type PrivateSnapshot,
+} from "@/lib/services/browser-marketplace-store";
 
 type MarketplaceContextValue = {
   hydrated: boolean;
@@ -42,49 +48,7 @@ type MarketplaceContextValue = {
   cartCount: number;
 };
 
-type PrivateSnapshot = {
-  cart: CartItem[];
-  wishlist: number[];
-  orders: Order[];
-  account: Account;
-  sellerListings: SellerListing[];
-};
-
 const MarketplaceContext = createContext<MarketplaceContextValue | null>(null);
-const privateKeys: PrivateStoreKey[] = ["cart", "wishlist", "orders", "account", "seller-products"];
-
-function readLocal<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback;
-  try {
-    const raw = window.localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function writeLocal(key: string, value: unknown) {
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch (error) {
-    console.error(`Unable to persist ${key}`, error);
-  }
-}
-
-function readPrivateSnapshot(scope: string, useLegacyFallback = false): PrivateSnapshot {
-  const fallback = <T,>(legacyKey: string, empty: T) => useLegacyFallback ? readLocal<T>(legacyKey, empty) : empty;
-  return {
-    cart: readLocal(scopedStorageKey(scope, "cart"), fallback("zomax_cart", [] as CartItem[])),
-    wishlist: readLocal(scopedStorageKey(scope, "wishlist"), fallback("zomax_wishlist", [] as number[])),
-    orders: readLocal(scopedStorageKey(scope, "orders"), fallback("zomax_orders", [] as Order[])),
-    account: readLocal(scopedStorageKey(scope, "account"), fallback("zomax_account", {} as Account)),
-    sellerListings: readLocal(scopedStorageKey(scope, "seller-products"), fallback("zomax_seller_products", [] as SellerListing[])),
-  };
-}
-
-function removePrivateSnapshot(scope: string) {
-  for (const key of privateKeys) window.localStorage.removeItem(scopedStorageKey(scope, key));
-}
 
 export function MarketplaceProvider({ children }: { children: React.ReactNode }) {
   const [scope, setScope] = useState("guest");
