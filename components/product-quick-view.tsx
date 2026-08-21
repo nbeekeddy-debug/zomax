@@ -2,33 +2,33 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { useState } from "react";
+import { Dialog } from "@/components/ui/dialog";
 import { ProductActions } from "@/components/product-actions";
 import { money, type Product } from "@/lib/products";
 
 export function ProductQuickView({ product }: { product: Product }) {
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    if (!open) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="rounded-xl border border-white/70 bg-white/90 px-3 py-2 text-[11px] font-black text-[#342923] shadow-sm backdrop-blur transition hover:bg-white"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+      >
+        Quick view
+      </button>
 
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
-    }
-
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = previous;
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  const modal = open ? (
-    <div className="fixed inset-0 z-[90] grid place-items-end bg-black/45 p-0 backdrop-blur-[2px] sm:place-items-center sm:p-5" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
-      <section role="dialog" aria-modal="true" aria-label={`Quick view ${product.name}`} className="max-h-[92svh] w-full overflow-y-auto rounded-t-[30px] bg-[#fffdfb] shadow-2xl sm:max-w-4xl sm:rounded-[32px]">
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        ariaLabel={`Quick view ${product.name}`}
+        overlayClassName="grid place-items-end p-0 sm:place-items-center sm:p-5"
+        panelClassName="max-h-[92svh] w-full overflow-y-auto rounded-t-[30px] bg-[#fffdfb] shadow-2xl outline-none sm:max-w-4xl sm:rounded-[32px]"
+      >
         <div className="flex items-center justify-between border-b border-[#eadfd7] px-5 py-4 sm:px-6">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#a63d08]">Quick view</p>
@@ -67,24 +67,10 @@ export function ProductQuickView({ product }: { product: Product }) {
             </div>
 
             <div className="mt-5"><ProductActions productId={product.id} /></div>
-            <Link href={`/product/${product.id}`} className="mt-3 flex min-h-11 items-center justify-center rounded-2xl border border-[#dfd2ca] bg-white px-4 text-sm font-black text-[#493a31] hover:border-orange-300 hover:text-[#a63d08]">Open full product page →</Link>
+            <Link href={`/product/${product.id}`} onClick={() => setOpen(false)} className="mt-3 flex min-h-11 items-center justify-center rounded-2xl border border-[#dfd2ca] bg-white px-4 text-sm font-black text-[#493a31] hover:border-orange-300 hover:text-[#a63d08]">Open full product page →</Link>
           </div>
         </div>
-      </section>
-    </div>
-  ) : null;
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="rounded-xl border border-white/70 bg-white/90 px-3 py-2 text-[11px] font-black text-[#342923] shadow-sm backdrop-blur transition hover:bg-white"
-        aria-haspopup="dialog"
-      >
-        Quick view
-      </button>
-      {modal && typeof document !== "undefined" ? createPortal(modal, document.body) : null}
+      </Dialog>
     </>
   );
 }
