@@ -1,0 +1,42 @@
+name: Generate npm lockfile
+
+on:
+  push:
+    branches: [quality/reproducible-dependencies]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: zomax-lockfile-generator
+  cancel-in-progress: true
+
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NPM_CONFIG_UPDATE_NOTIFIER: "false"
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v7
+        with:
+          ref: quality/reproducible-dependencies
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Generate lockfile
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Commit lockfile if changed
+        run: |
+          if git diff --quiet -- package-lock.json && git ls-files --error-unmatch package-lock.json >/dev/null 2>&1; then
+            echo "package-lock.json is already current"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "chore: add npm lockfile"
+          git push origin HEAD:quality/reproducible-dependencies
