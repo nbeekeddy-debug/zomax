@@ -1,15 +1,18 @@
 import { spawn } from "node:child_process";
 
 const port = Number(process.env.ZOMAX_SMOKE_PORT || 3100);
-const baseUrl = `http://127.0.0.1:${port}`;
-const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "-p", String(port)], {
-  stdio: ["ignore", "pipe", "pipe"],
-  env: { ...process.env, NODE_ENV: "production", NEXT_TELEMETRY_DISABLED: "1" },
-});
+const externalBaseUrl = process.env.ZOMAX_SMOKE_BASE_URL?.replace(/\/$/, "");
+const baseUrl = externalBaseUrl || `http://127.0.0.1:${port}`;
+const child = externalBaseUrl
+  ? null
+  : spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "-p", String(port)], {
+      stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, NODE_ENV: "production", NEXT_TELEMETRY_DISABLED: "1" },
+    });
 
 let stderr = "";
-child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
-child.stdout.on("data", (chunk) => process.stdout.write(chunk));
+child?.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
+child?.stdout.on("data", (chunk) => process.stdout.write(chunk));
 
 async function waitForServer() {
   const deadline = Date.now() + 20_000;
@@ -20,7 +23,7 @@ async function waitForServer() {
     } catch {}
     await new Promise((resolve) => setTimeout(resolve, 300));
   }
-  throw new Error(`Zomax server did not become healthy in time. ${stderr}`);
+  throw new Error(`Zomax server did not become healthy in time at ${baseUrl}. ${stderr}`);
 }
 
 async function expectOk(path) {
@@ -65,11 +68,11 @@ async function run() {
     throw new Error("Legacy /shop.html redirect target is incorrect");
   }
 
-  console.log(`\nZomax smoke checks passed for ${publicRoutes.length + 3} critical checks.`);
+  console.log(`\nZomax smoke checks passed for ${publicRoutes.length + 3} critical checks at ${baseUrl}.`);
 }
 
 try {
   await run();
 } finally {
-  child.kill("SIGTERM");
+  child?.kill("SIGTERM");
 }
