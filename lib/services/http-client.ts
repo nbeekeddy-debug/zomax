@@ -1,4 +1,4 @@
-import type { ServiceResult } from "@/lib/services/contracts";
+import type { ServiceResult } from "./contracts";
 
 export type RequestOptions = Omit<RequestInit, "body"> & { body?: unknown };
 
