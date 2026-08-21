@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isRouteActive } from "@/lib/navigation";
+import { isRouteActive } from "../lib/navigation";
 
 describe("isRouteActive", () => {
   it("matches the homepage only at the exact root", () => {
