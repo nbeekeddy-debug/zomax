@@ -53,11 +53,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en-NG">
       <body>
+        <a href="#zomax-page-content" className="z-skip-link">Skip to main content</a>
         <MarketplaceProvider>
           <PwaRuntime />
           <AuthSessionBridge />
           <SiteHeader />
-          {children}
+          <div id="zomax-page-content" tabIndex={-1} className="outline-none">
+            {children}
+          </div>
           <MobileDock />
         </MarketplaceProvider>
       </body>

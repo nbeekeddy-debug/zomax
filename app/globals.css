@@ -74,6 +74,26 @@ button, a { -webkit-tap-highlight-color: transparent; }
   outline-offset: 3px;
 }
 
+.z-skip-link {
+  position: fixed;
+  left: 1rem;
+  top: 0.75rem;
+  z-index: 200;
+  transform: translateY(-180%);
+  border-radius: 0.9rem;
+  background: var(--warm-dark);
+  color: white;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 800;
+  box-shadow: 0 12px 30px rgba(38, 29, 25, 0.22);
+  transition: transform 140ms ease;
+}
+
+.z-skip-link:focus {
+  transform: translateY(0);
+}
+
 /* Semantic helpers are intentionally scoped classes, not global text overrides. */
 .z-text-primary { color: var(--ink); }
 .z-text-secondary { color: var(--text-secondary); }
