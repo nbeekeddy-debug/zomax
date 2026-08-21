@@ -3,6 +3,7 @@
 import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useMarketplace } from "@/components/marketplace-provider";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { getSupabaseBrowserClient } from "@/lib/auth-client";
 import type { Account } from "@/lib/marketplace-types";
 
@@ -10,6 +11,7 @@ export default function AccountPage() {
   const { account, currentUser, updateAccount, replaceAccount, logout, deactivateLocalAccount } = useMarketplace();
   const [draft, setDraft] = useState<Account>(account);
   const [message, setMessage] = useState("");
+  const [confirmClear, setConfirmClear] = useState(false);
 
   useEffect(() => setDraft(account), [account]);
 
@@ -98,11 +100,21 @@ export default function AccountPage() {
             <div className="mt-4 grid gap-2">
               <button onClick={exportAccount} className="min-h-11 rounded-2xl bg-[#2b211c] px-4 py-2 text-sm font-black text-white hover:bg-orange-600">Export account</button>
               <label className="flex min-h-11 cursor-pointer items-center justify-center rounded-2xl bg-[#faf7f4] px-4 py-2 text-sm font-black text-[#5f5046] ring-1 ring-[#eadfd7]">Import account<input type="file" accept="application/json" onChange={importAccount} className="hidden" /></label>
-              <button onClick={() => { if (window.confirm("Clear the local Zomax profile and session on this device?")) { deactivateLocalAccount(); setMessage("Local account cleared."); } }} className="min-h-11 rounded-2xl bg-rose-50 px-4 py-2 text-sm font-black text-rose-700">Clear local profile</button>
+              <button type="button" onClick={() => setConfirmClear(true)} className="min-h-11 rounded-2xl bg-rose-50 px-4 py-2 text-sm font-black text-rose-700 hover:bg-rose-100">Clear local profile</button>
             </div>
           </section>
         </aside>
       </div>
+
+      <ConfirmDialog
+        open={confirmClear}
+        onClose={() => setConfirmClear(false)}
+        onConfirm={deactivateLocalAccount}
+        title="Clear this local Zomax profile?"
+        description="This removes this account’s locally stored Zomax profile, orders and seller listings from this browser. It does not delete a future server-backed account."
+        confirmLabel="Clear local profile"
+        destructive
+      />
     </main>
   );
 }
