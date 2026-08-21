@@ -11,10 +11,10 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: "bg-z-action text-white shadow-sm hover:bg-z-action-hover",
-  secondary: "border border-z-line bg-white text-z-ink hover:border-orange-300 hover:text-z-brand",
+  primary: "bg-zomax-action text-white shadow-sm hover:bg-[#a83a08]",
+  secondary: "border border-zomax-line bg-white text-zomax-ink hover:border-orange-300 hover:text-zomax-brand-dark",
   danger: "bg-rose-50 text-rose-700 hover:bg-rose-100",
-  ghost: "bg-z-soft text-z-secondary hover:text-z-brand",
+  ghost: "bg-zomax-surface text-zomax-secondary hover:text-zomax-brand-dark",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -35,7 +35,7 @@ export function Button({
   return (
     <button
       type={type}
-      className={`inline-flex items-center justify-center font-black transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-z-brand focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${variantClasses[variant]} ${sizeClasses[size]} ${fullWidth ? "w-full" : ""} ${className}`}
+      className={`inline-flex items-center justify-center font-black transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zomax-brand-dark focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${variantClasses[variant]} ${sizeClasses[size]} ${fullWidth ? "w-full" : ""} ${className}`}
       {...props}
     >
       {children}
