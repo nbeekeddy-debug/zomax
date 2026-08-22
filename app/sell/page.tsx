@@ -46,8 +46,8 @@ function SellForm() {
         </div>
         <label className="block text-sm font-bold text-[#493a31]">Image URL<input type="url" name="image" placeholder="https://…" className={input} /></label>
         <label className="block text-sm font-bold text-[#493a31]">Description<textarea required rows={5} name="description" className={input} /></label>
-        <button className="w-full rounded-2xl bg-[#c94b0b] px-5 py-3 font-black text-white hover:bg-[#a83a08]">Save listing</button>
-        {savedId ? <p className="rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-800">Listing saved to this account. <Link href="/shop" className="underline">View it in the shop.</Link></p> : null}
+        <button type="submit" className="w-full rounded-2xl bg-[#c94b0b] px-5 py-3 font-black text-white hover:bg-[#a83a08]">Save listing</button>
+        {savedId ? <p role="status" aria-live="polite" className="rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-800">Listing saved to this account. <Link href="/shop" className="underline">View it in the shop.</Link></p> : null}
       </form>
     </main>
   );
