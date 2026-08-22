@@ -38,7 +38,12 @@ export default function CheckoutPage() {
     router.push(`/confirmation?order=${encodeURIComponent(String(order.id))}`);
   }
 
-  if (!hydrated) return <main className="mx-auto max-w-5xl px-3 py-8 sm:px-4 md:px-6"><div className="h-80 animate-pulse rounded-[28px] bg-[#eee4dd]" /></main>;
+  if (!hydrated) return (
+    <main className="mx-auto max-w-5xl px-3 py-8 sm:px-4 md:px-6" aria-busy="true">
+      <div className="h-80 animate-pulse rounded-[28px] bg-[#eee4dd]" aria-hidden="true" />
+      <p role="status" aria-live="polite" className="sr-only">Loading checkout details…</p>
+    </main>
+  );
   if (!cart.length) return <main className="mx-auto max-w-3xl px-3 py-14 text-center sm:px-4"><h1 className="text-3xl font-black text-[#2b211c]">Your cart is empty.</h1><Link href="/shop" className="mt-6 inline-block rounded-2xl bg-orange-500 px-5 py-3 font-black text-white">Shop products</Link></main>;
 
   return (
@@ -54,7 +59,7 @@ export default function CheckoutPage() {
             <p className="font-black text-emerald-900">Pay on delivery</p>
             <p className="mt-1 text-xs leading-5 text-emerald-800">No card details are collected in the browser prototype. A real payment gateway will replace this before production launch.</p>
           </div>
-          {unresolved ? <p className="rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-900">Checkout is blocked because a legacy cart item has no migrated price.</p> : null}
+          {unresolved ? <p role="alert" className="rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-900">Checkout is blocked because a legacy cart item has no migrated price.</p> : null}
           <button disabled={unresolved} className="min-h-12 w-full rounded-2xl bg-orange-500 px-5 py-3 font-black text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-300">Place order</button>
         </form>
 
