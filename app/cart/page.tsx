@@ -80,9 +80,19 @@ export default function CartPage() {
               <div className="flex justify-between gap-3"><span>Checkout</span><strong className="text-white">Existing flow</strong></div>
             </div>
 
-            {unresolved.length ? <p className="mt-4 rounded-2xl bg-amber-400/10 p-3 text-xs font-bold text-amber-200">{unresolved.length} legacy cart item has no migrated price. Remove or re-add it before checkout so Zomax cannot charge the wrong total.</p> : null}
+            {unresolved.length ? (
+              <p role="status" aria-live="polite" className="mt-4 rounded-2xl bg-amber-400/10 p-3 text-xs font-bold text-amber-200">
+                {unresolved.length} legacy cart item{unresolved.length === 1 ? " has" : "s have"} no migrated price. Remove or re-add {unresolved.length === 1 ? "it" : "them"} before checkout so Zomax cannot charge the wrong total.
+              </p>
+            ) : null}
 
-            <Link aria-disabled={Boolean(unresolved.length)} href={unresolved.length ? "/cart" : "/checkout"} className={`mt-6 block w-full rounded-2xl px-5 py-3 text-center text-sm font-black ${unresolved.length ? "cursor-not-allowed bg-white/10 text-slate-500" : "bg-orange-500 text-white hover:bg-orange-600"}`}>Continue to checkout</Link>
+            {unresolved.length ? (
+              <div role="status" className="mt-6 w-full cursor-not-allowed rounded-2xl bg-white/10 px-5 py-3 text-center text-sm font-black text-slate-400" aria-label="Checkout unavailable until legacy cart items are resolved">
+                Resolve cart items to checkout
+              </div>
+            ) : (
+              <Link href="/checkout" className="mt-6 block w-full rounded-2xl bg-orange-500 px-5 py-3 text-center text-sm font-black text-white hover:bg-orange-600">Continue to checkout</Link>
+            )}
           </aside>
         </div>
       )}
