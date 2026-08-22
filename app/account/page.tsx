@@ -11,6 +11,7 @@ export default function AccountPage() {
   const { account, currentUser, updateAccount, replaceAccount, logout, deactivateLocalAccount } = useMarketplace();
   const [draft, setDraft] = useState<Account>(account);
   const [message, setMessage] = useState("");
+  const [messageKind, setMessageKind] = useState<"status" | "error">("status");
   const [confirmClear, setConfirmClear] = useState(false);
 
   useEffect(() => setDraft(account), [account]);
@@ -18,6 +19,7 @@ export default function AccountPage() {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     updateAccount(draft);
+    setMessageKind("status");
     setMessage("Profile saved.");
   }
 
@@ -25,6 +27,7 @@ export default function AccountPage() {
     const supabase = getSupabaseBrowserClient();
     if (supabase) await supabase.auth.signOut();
     logout();
+    setMessageKind("status");
     setMessage("Signed out on this device.");
   }
 
@@ -46,8 +49,10 @@ export default function AccountPage() {
       const nextAccount = "account" in parsed && parsed.account ? parsed.account : parsed as Account;
       if (!nextAccount || typeof nextAccount !== "object") throw new Error("Invalid account export");
       replaceAccount(nextAccount);
+      setMessageKind("status");
       setMessage("Account import completed.");
     } catch {
+      setMessageKind("error");
       setMessage("That file is not a valid Zomax account export.");
     } finally {
       event.target.value = "";
@@ -86,7 +91,11 @@ export default function AccountPage() {
           ))}
           <label className="flex items-start gap-3 rounded-2xl bg-[#faf7f4] p-4 text-sm font-bold text-[#5f5046]"><input type="checkbox" className="mt-1" checked={Boolean(draft.preferences?.newsletter)} onChange={(event) => setDraft((value) => ({ ...value, preferences: { ...value.preferences, newsletter: event.target.checked } }))} /><span>Email me useful Zomax updates</span></label>
           <button className="min-h-12 w-full rounded-2xl bg-orange-500 px-5 py-3 font-black text-white hover:bg-orange-600">Save profile</button>
-          {message ? <p role="status" className="text-center text-sm font-bold text-emerald-700">{message}</p> : null}
+          {message ? (
+            <p role={messageKind === "error" ? "alert" : "status"} className={`text-center text-sm font-bold ${messageKind === "error" ? "text-rose-700" : "text-emerald-700"}`}>
+              {message}
+            </p>
+          ) : null}
         </form>
 
         <aside className="space-y-4">
